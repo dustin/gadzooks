@@ -1,0 +1,16 @@
+<h1>Dashboard!</h1>
+<p>
+  Hello, {{guser.Email}}.
+</p>
+
+<h2>Your Hooks</h2>
+
+<ul ng-repeat="h in hooks">
+  <li>{{h.repo}} &rarr; {{h.dest}} <button ng-click="rmTask(h)">X</button></li>
+</ul>
+
+<form ng-submit="newHook()">
+  <label>Repo: <input name="repo" ng-model="repo" /></label><br/>
+  <label>Destination: <input name="dest" ng-model="dest" /></label><br/>
+  <input type="submit" value="Save" />
+</form>
