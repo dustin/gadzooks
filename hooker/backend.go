@@ -52,7 +52,7 @@ func startHook(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	appstats.RecordFraction = 0.05
-	c.Infof("Set worker app stats to %2f%%", appstats.RecordFraction*100.0)
+	c.Infof("Set worker app stats to %.2f%%", appstats.RecordFraction*100.0)
 
 	w.WriteHeader(204)
 }
