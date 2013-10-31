@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"appengine"
@@ -141,25 +142,31 @@ func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
+	wg := sync.WaitGroup{}
 	for _, hook := range hooks {
-		task := &taskqueue.Task{
-			Path:    "/backend/deliver",
-			Payload: data,
-			Header: http.Header{
-				"x-method":     []string{r.Method},
-				"x-repo":       []string{repo},
-				"x-dest":       []string{hook.Dest},
-				"x-owner":      []string{hook.Owner},
-				"x-hook":       []string{hook.Key.Encode()},
-				"content-type": []string{r.Header.Get("content-type")},
-			},
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			task := &taskqueue.Task{
+				Path:    "/backend/deliver",
+				Payload: data,
+				Header: http.Header{
+					"x-method":     []string{r.Method},
+					"x-repo":       []string{repo},
+					"x-dest":       []string{hook.Dest},
+					"x-owner":      []string{hook.Owner},
+					"x-hook":       []string{hook.Key.Encode()},
+					"content-type": []string{r.Header.Get("content-type")},
+				},
+			}
 
-		_, err = taskqueue.Add(c, task, "deliver")
-		if err != nil {
-			panic(err)
-		}
+			_, err = taskqueue.Add(c, task, "deliver")
+			if err != nil {
+				panic(err)
+			}
+		}()
 	}
+	wg.Wait()
 
 	w.WriteHeader(201)
 }
