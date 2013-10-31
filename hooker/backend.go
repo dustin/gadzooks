@@ -23,8 +23,6 @@ func hookDeliveryError(c appengine.Context, r *http.Request, err error) {
 }
 
 func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	c.Infof("Handling backend req: %v", r.URL.String())
-
 	req, err := http.NewRequest(
 		r.Header.Get("x-method"),
 		r.Header.Get("x-dest"),
