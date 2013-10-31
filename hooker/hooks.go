@@ -82,11 +82,11 @@ func deleteHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	memcache.Delete(c, repoKey(r.FormValue("repo")))
-
 	if err := datastore.Delete(c, k); err != nil {
 		panic(err)
 	}
+
+	memcache.Delete(c, repoKey(r.FormValue("repo")))
 
 	w.WriteHeader(204)
 }
