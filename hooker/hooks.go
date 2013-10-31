@@ -17,7 +17,10 @@ import (
 	"github.com/mjibson/appstats"
 )
 
-const maxBody = 64 * 1024
+const (
+	maxBody        = 64 * 1024
+	expirationTime = 86400 * time.Second
+)
 
 func init() {
 	http.Handle("/api/hooks/new", appstats.NewHandler(newHook))
@@ -116,7 +119,7 @@ func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
 
 		item = &memcache.Item{
 			Key:        cacheKey,
-			Expiration: 3600 * time.Second,
+			Expiration: expirationTime,
 			Object:     rv,
 		}
 
