@@ -2,6 +2,7 @@ package hooker
 
 import (
 	"net/http"
+	"strings"
 
 	"appengine"
 	"appengine/urlfetch"
@@ -53,6 +54,12 @@ func startHook(w http.ResponseWriter, r *http.Request) {
 	for k, v := range r.Header {
 		c.Infof("%v = %v", k, v)
 	}
+
+	if strings.Contains(r.Header.Get("Host"), ".worker.") {
+		c.Infof("This is a worker, (nearly) disabling app stats")
+		appstats.RecordFraction = 0.05
+	}
+
 	w.WriteHeader(204)
 }
 
