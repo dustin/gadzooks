@@ -9,6 +9,9 @@ import (
 
 func init() {
 	http.HandleFunc("/backend/deliver", deliverHook)
+
+	http.HandleFunc("/_ah/start", startHook)
+	http.HandleFunc("/_ah/stop", stopHook)
 }
 
 func hookDeliveryError(c appengine.Context, r *http.Request, err error) {
@@ -44,4 +47,12 @@ func deliverHook(w http.ResponseWriter, r *http.Request) {
 		r.Header.Get("x-owner"), res.Status)
 
 	w.WriteHeader(res.StatusCode)
+}
+
+func startHook(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(204)
+}
+
+func stopHook(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(204)
 }
