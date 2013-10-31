@@ -1,0 +1,3 @@
+[submodule "github.com/mjibson/appstats"]
+	path = github.com/mjibson/appstats
+	url = git://github.com/mjibson/appstats.git
