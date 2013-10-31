@@ -35,8 +35,10 @@ function DashboardCtrl($scope, $http) {
     };
 
     $scope.rmTask = function(t) {
+        console.log("Removing", t);
         $http.post("/api/hooks/rm",
-                   "key=" + encodeURIComponent(t.Key),
+                   "key=" + encodeURIComponent(t.Key) +
+                   "&repo=" + encodeURIComponent(t.repo),
                    {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
             success(function(e) {
                 $scope.hooks = _.without($scope.hooks, t);

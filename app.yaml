@@ -24,6 +24,14 @@ handlers:
   script: _go_app
   login: admin
 
+- url: /backend/.*
+  script: _go_app
+  login: admin
+
+- url: /deliver/.*
+  script: _go_app
+  login: optional
+
 - url: .*
   script: _go_app
   login: required

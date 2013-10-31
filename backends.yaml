@@ -1,0 +1,4 @@
+backends:
+- name: worker
+  class: B1
+  instances: 1

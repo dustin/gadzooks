@@ -1,0 +1,8 @@
+queue:
+- name: deliver
+  target: worker
+  rate: 35/s
+  max_concurrent_requests: 20
+  bucket_size: 25
+  retry_parameters:
+    task_age_limit: 3d
