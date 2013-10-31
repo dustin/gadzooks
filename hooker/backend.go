@@ -49,6 +49,10 @@ func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func startHook(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	for k, v := range r.Header {
+		c.Infof("%v = %v", k, v)
+	}
 	w.WriteHeader(204)
 }
 
