@@ -12,20 +12,20 @@ import (
 	"appengine/memcache"
 	"appengine/taskqueue"
 	"appengine/user"
+
+	"github.com/mjibson/appstats"
 )
 
 const maxBody = 64 * 1024
 
 func init() {
-	http.HandleFunc("/api/hooks/new", newHook)
-	http.HandleFunc("/api/hooks/rm", deleteHook)
-	http.HandleFunc("/api/hooks", listHooks)
-	http.HandleFunc("/deliver/", queueHook)
+	http.Handle("/api/hooks/new", appstats.NewHandler(newHook))
+	http.Handle("/api/hooks/rm", appstats.NewHandler(deleteHook))
+	http.Handle("/api/hooks", appstats.NewHandler(listHooks))
+	http.Handle("/deliver/", appstats.NewHandler(queueHook))
 }
 
-func newHook(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-
+func newHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	t := time.Now().UTC()
 
 	hook := &Hook{
@@ -53,9 +53,7 @@ func newHook(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, hook)
 }
 
-func listHooks(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-
+func listHooks(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	results := []Hook{}
 
 	q := datastore.NewQuery("Hook").
@@ -75,9 +73,7 @@ func listHooks(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, results)
 }
 
-func deleteHook(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-
+func deleteHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	tid := r.FormValue("key")
 
 	k, err := datastore.DecodeKey(tid)
@@ -133,9 +129,7 @@ func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
 	return rv, nil
 }
 
-func queueHook(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
-
+func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	repo := r.URL.Path[len("/deliver/"):]
 	hooks, err := findHooks(c, repo)
 	if err != nil {

@@ -8,6 +8,8 @@ import (
 
 	"appengine"
 	"appengine/user"
+
+	"github.com/mjibson/appstats"
 )
 
 var appStatic []byte
@@ -20,10 +22,13 @@ func init() {
 		panic(err)
 	}
 
+	appstats.RecordFraction = 1
+
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/app/", serveAppStatic)
-	http.HandleFunc("/api/currentuser/", currentUser)
 	http.HandleFunc("/logout", logoutRedirect)
+
+	http.Handle("/api/currentuser/", appstats.NewHandler(currentUser))
 }
 
 func mustEncode(w io.Writer, i interface{}) {
@@ -48,8 +53,7 @@ func logoutRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func currentUser(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
+func currentUser(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, user.Current(c))
 }
 

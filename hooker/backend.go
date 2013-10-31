@@ -5,10 +5,12 @@ import (
 
 	"appengine"
 	"appengine/urlfetch"
+
+	"github.com/mjibson/appstats"
 )
 
 func init() {
-	http.HandleFunc("/backend/deliver", deliverHook)
+	http.Handle("/backend/deliver", appstats.NewHandler(deliverHook))
 
 	http.HandleFunc("/_ah/start", startHook)
 	http.HandleFunc("/_ah/stop", stopHook)
@@ -20,8 +22,7 @@ func hookDeliveryError(c appengine.Context, r *http.Request, err error) {
 		r.Header.Get("x-owner"), err)
 }
 
-func deliverHook(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
+func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	c.Infof("Handling backend req: %v", r.URL.String())
 
 	req, err := http.NewRequest(
