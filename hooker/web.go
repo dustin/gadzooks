@@ -22,7 +22,7 @@ func init() {
 		panic(err)
 	}
 
-	appstats.RecordFraction = 1
+	appstats.RecordFraction = 0.5
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/app/", serveAppStatic)
