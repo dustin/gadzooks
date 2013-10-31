@@ -27,6 +27,7 @@ func init() {
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/app/", serveAppStatic)
 	http.HandleFunc("/logout", logoutRedirect)
+	http.HandleFunc("/_ah/warmup", warmupHook)
 
 	http.Handle("/api/currentuser/", appstats.NewHandler(currentUser))
 }
@@ -59,4 +60,9 @@ func currentUser(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/app/", http.StatusFound)
+}
+
+func warmupHook(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	c.Infof("Warming up %v", r.Header.Get("Host"))
 }
