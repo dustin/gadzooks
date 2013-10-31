@@ -145,7 +145,7 @@ func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	wg := sync.WaitGroup{}
 	for _, hook := range hooks {
 		wg.Add(1)
-		go func() {
+		go func(hook *Hook) {
 			defer wg.Done()
 			task := &taskqueue.Task{
 				Path:    "/backend/deliver",
@@ -164,7 +164,7 @@ func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-		}()
+		}(hook)
 	}
 	wg.Wait()
 
