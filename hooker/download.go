@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"appengine"
@@ -70,6 +71,37 @@ func storeLatestDownload(c appengine.Context, t time.Time) error {
 	return err
 }
 
+func eventProcessor(c appengine.Context, repos map[string]bool,
+	ch chan []byte, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for data := range ch {
+		repo := struct {
+			Type       string
+			Repository struct{ Owner, Name string }
+			Payload    struct{ Head string }
+		}{}
+		err := json.Unmarshal(data, &repo)
+		if err != nil {
+			c.Warningf("Error unmarshaling json from %s: %v", data, err)
+			continue
+		}
+		if repo.Type != "PushEvent" {
+			continue
+		}
+
+		rname := repo.Repository.Owner + "/" + repo.Repository.Name
+		if repos[rname] {
+			form := url.Values{"payload": []string{string(data)}}
+			_, err = taskqueue.Add(c,
+				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
+			if err != nil {
+				c.Errorf("Error queueing task:  %v", err)
+			}
+		}
+	}
+}
+
 func processFile(c appengine.Context, repos map[string]bool, fn string) error {
 	c.Infof("Downloading %v", fn)
 	start := time.Now()
@@ -81,12 +113,21 @@ func processFile(c appengine.Context, repos map[string]bool, fn string) error {
 	if res.StatusCode != 200 {
 		return fmt.Errorf("Error grabbing %v: %v", fn, res)
 	}
+
 	defer res.Body.Close()
 	z, err := gzip.NewReader(res.Body)
 	if err != nil {
 		return err
 	}
 	d := json.NewDecoder(z)
+
+	wg := &sync.WaitGroup{}
+	ch := make(chan []byte)
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go eventProcessor(c, repos, ch, wg)
+	}
+
 	docs := 0
 	for {
 		rm := json.RawMessage{}
@@ -95,35 +136,16 @@ func processFile(c appengine.Context, repos map[string]bool, fn string) error {
 			break
 		}
 		if err != nil {
+			close(ch)
 			return err
 		}
 
-		repo := struct {
-			Type       string
-			Repository struct{ Owner, Name string }
-			Payload    struct{ Head string }
-		}{}
-		err = json.Unmarshal([]byte(rm), &repo)
-		if err != nil {
-			c.Warningf("Error unmarshaling json from %s: %v", rm, err)
-			continue
-		}
-		if repo.Type != "PushEvent" {
-			continue
-		}
-
-		rname := repo.Repository.Owner + "/" + repo.Repository.Name
-		if repos[rname] {
-			form := url.Values{"payload": []string{string(rm)}}
-			_, err = taskqueue.Add(c,
-				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
-			if err != nil {
-				return err
-			}
-		}
+		ch <- []byte(rm)
 
 		docs++
 	}
+	close(ch)
+	wg.Wait()
 	c.Infof("Found %v events in %v", docs, time.Since(start))
 	return nil
 }
