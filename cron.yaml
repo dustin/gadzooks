@@ -1,0 +1,4 @@
+cron:
+- description: download things
+  url: /cron/download
+  schedule: every 1 hours

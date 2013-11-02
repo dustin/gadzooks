@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/taskqueue"
 	"appengine/urlfetch"
 
 	"github.com/mjibson/appstats"
@@ -68,7 +70,7 @@ func storeLatestDownload(c appengine.Context, t time.Time) error {
 	return err
 }
 
-func processFile(c appengine.Context, fn string) error {
+func processFile(c appengine.Context, repos map[string]bool, fn string) error {
 	c.Infof("Downloading %v", fn)
 	start := time.Now()
 	h := urlfetch.Client(c)
@@ -95,24 +97,72 @@ func processFile(c appengine.Context, fn string) error {
 		if err != nil {
 			return err
 		}
+
+		repo := struct {
+			Type       string
+			Repository struct{ Owner, Name string }
+			Payload    struct{ Head string }
+		}{}
+		err = json.Unmarshal([]byte(rm), &repo)
+		if err != nil {
+			c.Warningf("Error unmarshaling json from %s: %v", rm, err)
+			continue
+		}
+		if repo.Type != "PushEvent" {
+			continue
+		}
+
+		rname := repo.Repository.Owner + "/" + repo.Repository.Name
+		if repos[rname] {
+			form := url.Values{"payload": []string{string(rm)}}
+			_, err = taskqueue.Add(c,
+				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
+			if err != nil {
+				return err
+			}
+		}
+
 		docs++
 	}
 	c.Infof("Found %v events in %v", docs, time.Since(start))
 	return nil
 }
 
+func loadInterestingRepos(c appengine.Context) (map[string]bool, error) {
+	q := datastore.NewQuery("Hook")
+	found := map[string]bool{}
+	for t := q.Run(c); ; {
+		var x Hook
+		_, err := t.Next(&x)
+		if err == datastore.Done {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+
+		found[x.Repo] = true
+	}
+	return found, nil
+}
+
 func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+
+	repos, err := loadInterestingRepos(c)
+	if err != nil {
+		panic(err)
+	}
+
 	t, err := latestDownload(c)
 	if err != nil {
 		panic(err)
 	}
 	for _, t = range genDates(t, time.Now(), time.Hour) {
-		err := processFile(c, formatDate(t))
+		err := processFile(c, repos, formatDate(t))
 		if err != nil {
 			c.Infof("Stopping at %v because %v", t, err)
 			break
 		}
+		storeLatestDownload(c, t)
 	}
-	storeLatestDownload(c, t)
 	w.WriteHeader(204)
 }
