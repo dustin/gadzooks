@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"appengine"
 	"appengine/user"
@@ -23,6 +24,13 @@ func init() {
 	}
 
 	appstats.RecordFraction = 0.5
+	appstats.ShouldRecord = func(r *http.Request) bool {
+		if strings.HasPrefix(r.URL.Path, "/cron") {
+			return true
+		} else {
+			return appstats.DefaultShouldRecord(r)
+		}
+	}
 
 	http.HandleFunc("/", serveHome)
 	http.HandleFunc("/app/", serveAppStatic)
