@@ -31,6 +31,10 @@ handlers:
   script: _go_app
   login: admin
 
+- url: /_ah/queue/go/delay
+  script: _go_app
+  login: admin
+
 - url: /deliver/.*
   script: _go_app
   login: optional
