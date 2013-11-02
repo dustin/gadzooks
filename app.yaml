@@ -23,6 +23,10 @@ handlers:
   script: _go_app
   login: admin
 
+- url: /cron/.*
+  script: _go_app
+  login: admin
+
 - url: /api/admin/
   script: _go_app
   login: admin
