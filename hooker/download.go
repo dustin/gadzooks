@@ -66,6 +66,7 @@ func latestDownload(c appengine.Context) (time.Time, error) {
 }
 
 func storeLatestDownload(c appengine.Context, t time.Time) error {
+	c.Infof("Snapshotting dl state to %v", t)
 	_, err := datastore.Put(c,
 		datastore.NewKey(c, "DLState", "dlstate", 0, nil), &dlState{t})
 	return err
@@ -178,13 +179,16 @@ func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	for _, t = range genDates(t, time.Now(), time.Hour) {
+	for _, t = range genDates(t.Add(time.Hour), time.Now(), time.Hour) {
 		err := processFile(c, repos, formatDate(t))
 		if err != nil {
 			c.Infof("Stopping at %v because %v", t, err)
 			break
 		}
-		storeLatestDownload(c, t)
+		if err = storeLatestDownload(c, t); err != nil {
+			c.Warningf("Problem storing latest download timestamp (%v): %v",
+				t, err)
+		}
 	}
 	w.WriteHeader(204)
 }
