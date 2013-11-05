@@ -31,20 +31,3 @@
   <input name="hooks" size="80" ng-model="newhooks" ng-list="/ /"/><br/>
   <input type="submit" value="Save" />
 </form>
-
-<hr/>
-
-<button ng-hide="hookdetail" ng-click="hookdetail=true">Hook Details</button>
-<div ng-show="hookdetail">
-<h2>Your Hooks</h2>
-
-<ul ng-repeat="h in hooks">
-  <li>{{h.repo}} &rarr; {{h.dest}} <button ng-click="rmHook(h)">X</button></li>
-</ul>
-
-<form ng-submit="newHook()">
-  <label>Repo: <input name="repo" ng-model="repo" /></label><br/>
-  <label>Destination: <input name="dest" ng-model="dest" /></label><br/>
-  <input type="submit" value="Save" />
-</form>
-</div>

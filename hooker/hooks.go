@@ -4,7 +4,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"appengine/datastore"
 	"appengine/memcache"
 	"appengine/taskqueue"
-	"appengine/user"
 
 	"github.com/mjibson/appstats"
 )
@@ -23,75 +21,7 @@ const (
 )
 
 func init() {
-	http.Handle("/api/hooks/new", appstats.NewHandler(newHook))
-	http.Handle("/api/hooks/rm", appstats.NewHandler(deleteHook))
-	http.Handle("/api/hooks", appstats.NewHandler(listHooks))
 	http.Handle("/deliver/", appstats.NewHandler(queueHook))
-}
-
-func newHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	t := time.Now().UTC()
-
-	hook := &Hook{
-		Repo:     strings.TrimSpace(r.FormValue("repo")),
-		Dest:     strings.TrimSpace(r.FormValue("dest")),
-		Owner:    user.Current(c).Email,
-		Created:  t,
-		Modified: t,
-	}
-
-	if err := hook.validate(); err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-
-	k, err := datastore.Put(c, datastore.NewIncompleteKey(c, "Hook", nil), hook)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	hook.Key = k
-
-	memcache.Delete(c, repoKey(hook.Repo))
-
-	mustEncode(w, hook)
-}
-
-func listHooks(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	results := []Hook{}
-
-	q := datastore.NewQuery("Hook").
-		Filter("Owner = ", user.Current(c).Email).
-		Order("Repo")
-
-	for t := q.Run(c); ; {
-		var x Hook
-		k, err := t.Next(&x)
-		if err != nil {
-			break
-		}
-		x.Key = k
-		results = append(results, x)
-	}
-
-	mustEncode(w, results)
-}
-
-func deleteHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	tid := r.FormValue("key")
-
-	k, err := datastore.DecodeKey(tid)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := datastore.Delete(c, k); err != nil {
-		panic(err)
-	}
-
-	memcache.Delete(c, repoKey(r.FormValue("repo")))
-
-	w.WriteHeader(204)
 }
 
 func repoKey(repo string) string {
