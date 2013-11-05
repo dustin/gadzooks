@@ -3,6 +3,30 @@
   Hello, {{guser.Email}}.
 </p>
 
+<h2>Your Projects</h2>
+
+<ul ng-repeat="p in projects">
+  <li>{{p.name}} <button ng-click="rmProject(p)">X</button>
+    <h3>Deps</h3>
+    <ul ng-repeat="d in p.deps">
+      <li>{{d}}</li>
+    </ul>
+    <h3>Hooks</h3>
+    <ul ng-repeat="h in p.hooks">
+      <li>{{h}}</li>
+    </ul>
+  </li>
+</ul>
+
+<form ng-submit="newProject()">
+  <label>Name: <input name="name" ng-model="newname" /></label>
+  <h3>Deps</h3>
+  <input name="deps" size="80" ng-model="newdeps" ng-list="/ /"/>
+  <h3>Hooks</h3>
+  <input name="hooks" size="80" ng-model="newhooks" ng-list="/ /"/><br/>
+  <input type="submit" value="Save" />
+</form>
+
 <h2>Your Hooks</h2>
 
 <ul ng-repeat="h in hooks">

@@ -14,3 +14,8 @@ indexes:
   properties:
   - name: Owner
   - name: Repo
+
+- kind: Project
+  properties:
+  - name: Owner
+  - name: Name
