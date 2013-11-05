@@ -2,6 +2,7 @@ package hooker
 
 import (
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -115,34 +116,40 @@ func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, project)
 }
 
-func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	tid := r.FormValue("key")
+var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.Values) error {
+	tid := form.Get("key")
 
 	k, err := datastore.DecodeKey(tid)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	project := &Project{}
 	err = datastore.Get(c, k, project)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	project.Modified = time.Now().UTC()
-	project.Name = r.FormValue("name")
-	project.Deps = r.Form["deps"]
-	project.Hooks = r.Form["hooks"]
+	project.Name = form.Get("name")
+	project.Deps = form["deps"]
+	project.Hooks = form["hooks"]
+
+	c.Infof("Delayed update of %v for %v", project.Name, project.Owner)
 
 	_, err = datastore.Put(c, k, project)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+		return err
 	}
 
 	syncHooks.Call(c, k)
+	return nil
+})
 
-	mustEncode(w, project)
+func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	updateInner.Call(c, r.Form)
+	w.WriteHeader(202)
 }
 
 func rmProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
