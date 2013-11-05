@@ -1,7 +1,4 @@
 <h1>Dashboard!</h1>
-<p>
-  Hello, {{guser.Email}}.
-</p>
 
 <h2>Your Projects</h2>
 
@@ -24,6 +21,8 @@
   </li>
 </ul>
 
+<h2>New Project</h2>
+
 <form ng-submit="newProject()">
   <label>Name: <input name="name" ng-model="newname" /></label>
   <h3>Deps</h3>
@@ -33,6 +32,10 @@
   <input type="submit" value="Save" />
 </form>
 
+<hr/>
+
+<button ng-hide="hookdetail" ng-click="hookdetail=true">Hook Details</button>
+<div ng-show="hookdetail">
 <h2>Your Hooks</h2>
 
 <ul ng-repeat="h in hooks">
@@ -44,3 +47,4 @@
   <label>Destination: <input name="dest" ng-model="dest" /></label><br/>
   <input type="submit" value="Save" />
 </form>
+</div>
