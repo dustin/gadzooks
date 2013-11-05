@@ -103,12 +103,14 @@ function DashboardCtrl($scope, $http) {
 
     $scope.addDep = function(p) {
         console.log("Adding", p.newdep, "to", p);
+        p.deps = p.deps || [];
         p.deps.push(p.newdep);
         updateProject(p);
     };
 
     $scope.addHook = function(p) {
         console.log("Adding", p.newhook, "to", p);
+        p.hooks = p.hooks || [];
         p.hooks.push(p.newhook);
         updateProject(p);
     };
