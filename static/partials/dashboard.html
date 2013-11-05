@@ -9,12 +9,18 @@
   <li>{{p.name}} <button ng-click="rmProject(p)">X</button>
     <h3>Deps</h3>
     <ul ng-repeat="d in p.deps">
-      <li>{{d}}</li>
+      <li>{{d}} <button ng-click="rmProjectDep(p, d)">X</button></li>
     </ul>
+    <form ng-submit="addDep(p)">
+      Add a dep:  <input size="80" ng-model="p.newdep"/>
+    </form>
     <h3>Hooks</h3>
     <ul ng-repeat="h in p.hooks">
-      <li>{{h}}</li>
+      <li>{{h}} <button ng-click="rmProjectHook(p, h)">X</button></li>
     </ul>
+    <form ng-submit="addHook(p)">
+      Add a hook:  <input size="80" ng-model="p.newhook"/>
+    </form>
   </li>
 </ul>
 
@@ -30,7 +36,7 @@
 <h2>Your Hooks</h2>
 
 <ul ng-repeat="h in hooks">
-  <li>{{h.repo}} &rarr; {{h.dest}} <button ng-click="rmTask(h)">X</button></li>
+  <li>{{h.repo}} &rarr; {{h.dest}} <button ng-click="rmHook(h)">X</button></li>
 </ul>
 
 <form ng-submit="newHook()">

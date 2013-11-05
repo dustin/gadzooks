@@ -38,7 +38,7 @@ function DashboardCtrl($scope, $http) {
             });
     };
 
-    $scope.rmTask = function(t) {
+    $scope.rmHook = function(t) {
         console.log("Removing", t);
         $http.post("/api/hooks/rm",
                    "key=" + encodeURIComponent(t.Key) +
@@ -70,6 +70,46 @@ function DashboardCtrl($scope, $http) {
                 $scope.newhooks = [];
                 $scope.projects.push(data);
             });
+    };
+
+    var updateProject = function(p) {
+        console.log("Updating", p);
+        var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key);
+        for (var i = 0; i < p.deps.length; i++) {
+            params += "&deps=" + encodeURIComponent(p.deps[i]);
+        }
+        for (var i = 0; i < p.hooks.length; i++) {
+            params += "&hooks=" + encodeURIComponent(p.hooks[i]);
+        }
+        $http.post("/api/projects/update", params,
+                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+            success(function(data) {
+                p.newdep = p.newhook = "";
+            });
+    };
+
+    $scope.rmProjectDep = function(p, d) {
+        console.log("Removing", d, "from", p);
+        p.deps = _.without(p.deps, d);
+        updateProject(p);
+    };
+
+    $scope.rmProjectHook = function(p, h) {
+        console.log("Removing", h, "from", p);
+        p.hooks = _.without(p.hooks, d);
+        updateProject(p);
+    };
+
+    $scope.addDep = function(p) {
+        console.log("Adding", p.newdep, "to", p);
+        p.deps.push(p.newdep);
+        updateProject(p);
+    };
+
+    $scope.addHook = function(p) {
+        console.log("Adding", p.newhook, "to", p);
+        p.hooks.push(p.newhook);
+        updateProject(p);
     };
 
     $scope.rmProject = function(t) {

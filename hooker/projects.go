@@ -42,6 +42,7 @@ var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastor
 		hooks := []*Hook{}
 		for _, dep := range project.Deps {
 			for _, hook := range project.Hooks {
+				tc.Infof("Hooking %v -> %v", dep, hook)
 				keys = append(keys, datastore.NewIncompleteKey(c, "Hook", pkey))
 				hooks = append(hooks, &Hook{
 					Project:  pkey,
@@ -132,6 +133,12 @@ func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) 
 	project.Name = r.FormValue("name")
 	project.Deps = r.Form["deps"]
 	project.Hooks = r.Form["hooks"]
+
+	_, err = datastore.Put(c, k, project)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	syncHooks.Call(c, k)
 
