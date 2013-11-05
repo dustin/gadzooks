@@ -2,24 +2,25 @@
 
 <h2>Your Projects</h2>
 
-<ul ng-repeat="p in projects">
-  <li>{{p.name}} <button ng-click="rmProject(p)">X</button>
-    <h3>Deps</h3>
-    <ul ng-repeat="d in p.deps">
-      <li>{{d}} <button ng-click="rmProjectDep(p, d)">X</button></li>
-    </ul>
-    <form ng-submit="addDep(p)">
-      Add a dep:  <input size="80" ng-model="p.newdep"/>
-    </form>
-    <h3>Hooks</h3>
-    <ul ng-repeat="h in p.hooks">
-      <li>{{h}} <button ng-click="rmProjectHook(p, h)">X</button></li>
-    </ul>
-    <form ng-submit="addHook(p)">
-      Add a hook:  <input size="80" ng-model="p.newhook"/>
-    </form>
-  </li>
-</ul>
+<div ng-repeat="p in projects">
+  <h3>{{p.name}} <button ng-click="rmProject(p)">X</button></h3>
+
+  <h4>Deps</h4>
+  <ul ng-repeat="d in p.deps">
+    <li>{{d}} <button ng-click="rmProjectDep(p, d)">X</button></li>
+  </ul>
+  <form ng-submit="addDep(p)">
+    Add a dep:  <input size="80" ng-model="p.newdep"/>
+  </form>
+
+  <h4>Hooks</h4>
+  <ul ng-repeat="h in p.hooks">
+    <li>{{h}} <button ng-click="rmProjectHook(p, h)">X</button></li>
+  </ul>
+  <form ng-submit="addHook(p)">
+    Add a hook:  <input size="80" ng-model="p.newhook"/>
+  </form>
+</div>
 
 <h2>New Project</h2>
 
