@@ -76,10 +76,10 @@ function DashboardCtrl($scope, $http) {
     var updateProject = function(p) {
         console.log("Updating", p);
         var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key);
-        for (var i = 0; i < p.deps.length; i++) {
+        for (var i = 0; i < (p.deps || []).length; i++) {
             params += "&deps=" + encodeURIComponent(p.deps[i]);
         }
-        for (var i = 0; i < p.hooks.length; i++) {
+        for (var i = 0; i < (p.hooks || []).length; i++) {
             params += "&hooks=" + encodeURIComponent(p.hooks[i]);
         }
         $http.post("/api/projects/update", params,
