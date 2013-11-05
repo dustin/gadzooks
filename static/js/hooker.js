@@ -10,10 +10,6 @@ angular.module('hooker', []).
             }]);
 
 function DashboardCtrl($scope, $http) {
-    $http.get("/api/currentuser/").success(function(data) {
-        $scope.guser = data;
-    });
-
     $http.get("/api/projects").success(function(data) {
         $scope.projects = data;
     });
