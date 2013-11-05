@@ -39,10 +39,11 @@ func hasSeen(c appengine.Context, dest, hashstr string) bool {
 
 	itm := &memcache.Item{
 		Key:        fmt.Sprintf("seen-%v-%x", hashstr, h.Sum(nil)),
+		Value:      []byte{},
 		Expiration: 2 * time.Hour,
 	}
 
-	return memcache.Add(c, itm) != nil
+	return memcache.Add(c, itm) == memcache.ErrNotStored
 }
 
 func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
