@@ -1,7 +1,6 @@
 package hooker
 
 import (
-	"fmt"
 	"time"
 
 	"appengine/datastore"
@@ -28,17 +27,4 @@ type Hook struct {
 	Modified time.Time `json:"modified"`
 
 	Key *datastore.Key `datastore:"-"`
-}
-
-func (h Hook) validate() error {
-	if h.Repo == "" {
-		return fmt.Errorf("invalid repo: %q", h.Repo)
-	}
-	if h.Dest == "" {
-		return fmt.Errorf("invalid destination: %q", h.Dest)
-	}
-	if h.Owner == "" {
-		return fmt.Errorf("invalid owner: %q", h.Owner)
-	}
-	return nil
 }
