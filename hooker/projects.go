@@ -22,7 +22,7 @@ func init() {
 	http.Handle("/api/projects", appstats.NewHandler(lsProjects))
 }
 
-var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastore.Key) error {
+func syncHooks(c appengine.Context, pkey *datastore.Key) error {
 	cacheKeys := []string{interestKey}
 	err := datastore.RunInTransaction(c, func(tc appengine.Context) error {
 		project := &Project{}
@@ -69,7 +69,9 @@ var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastor
 	}
 	return err
 
-})
+}
+
+var syncHooksAsync = delay.Func("syncHooksAsync", syncHooks)
 
 var deleteProject = delay.Func("deleteProject", func(c appengine.Context, pkey *datastore.Key) error {
 	project := &Project{}
@@ -136,7 +138,7 @@ func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	project.Key = k
 
-	syncHooks.Call(c, k)
+	syncHooksAsync.Call(c, k)
 
 	mustEncode(w, project)
 }
@@ -167,8 +169,7 @@ var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.V
 		return err
 	}
 
-	syncHooks.Call(c, k)
-	return nil
+	return syncHooks(c, k)
 })
 
 func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
