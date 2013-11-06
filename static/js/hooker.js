@@ -63,7 +63,7 @@ function DashboardCtrl($scope, $http) {
 
     $scope.rmProjectHook = function(p, h) {
         console.log("Removing", h, "from", p);
-        p.hooks = _.without(p.hooks, d);
+        p.hooks = _.without(p.hooks, h);
         updateProject(p);
     };
 
