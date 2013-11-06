@@ -19,23 +19,27 @@ func init() {
 	http.Handle("/api/groups", appstats.NewHandler(lsGroups))
 }
 
-func lsGroups(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func userGroups(c appengine.Context, email string) ([]Group, error) {
 	results := []Group{}
 
-	q := datastore.NewQuery("Group").
-		Filter("Members = ", user.Current(c).Email).
-		Order("Name")
-
+	q := datastore.NewQuery("Group").Filter("Members = ", email)
 	keys, err := q.GetAll(c, &results)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+		return nil, err
 	}
 
 	for i := range keys {
 		results[i].Key = keys[i]
 	}
+	return results, nil
+}
 
+func lsGroups(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	results, err := userGroups(c, user.Current(c).Email)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 	mustEncode(w, results)
 }
 
