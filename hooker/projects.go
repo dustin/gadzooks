@@ -23,6 +23,7 @@ func init() {
 }
 
 var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastore.Key) error {
+	cacheKeys := []string{interestKey}
 	err := datastore.RunInTransaction(c, func(tc appengine.Context) error {
 		project := &Project{}
 		err := datastore.Get(tc, pkey, project)
@@ -43,6 +44,7 @@ var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastor
 		keys = nil
 		hooks := []*Hook{}
 		for _, dep := range project.Deps {
+			cacheKeys = append(cacheKeys, repoKey(dep))
 			for _, hook := range project.Hooks {
 				tc.Infof("Hooking %v -> %v", dep, hook)
 				keys = append(keys, datastore.NewIncompleteKey(c, "Hook", pkey))
@@ -62,23 +64,35 @@ var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastor
 	}, nil)
 
 	if err == nil {
-		memcache.Delete(c, interestKey)
+		c.Infof("Clearing cache for %v", cacheKeys)
+		memcache.DeleteMulti(c, cacheKeys)
 	}
 	return err
 
 })
 
-var deleteHooks = delay.Func("deleteHooks", func(c appengine.Context, pkey *datastore.Key) error {
+var deleteProject = delay.Func("deleteProject", func(c appengine.Context, pkey *datastore.Key) error {
+	project := &Project{}
+	if err := datastore.Get(c, pkey, project); err != nil {
+		return err
+	}
+
 	q := datastore.NewQuery("Hook").Ancestor(pkey).KeysOnly()
 	keys, err := q.GetAll(c, nil)
 	if err != nil {
 		return err
 	}
 
+	keys = append(keys, pkey)
 	err = datastore.DeleteMulti(c, keys)
 
 	if err == nil {
-		memcache.Delete(c, interestKey)
+		cacheKeys := []string{interestKey}
+		for _, r := range project.Deps {
+			cacheKeys = append(cacheKeys, repoKey(r))
+		}
+		c.Infof("Clearing cache for %v", cacheKeys)
+		memcache.DeleteMulti(c, cacheKeys)
 	}
 	return err
 })
@@ -171,11 +185,7 @@ func rmProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	if err := datastore.Delete(c, k); err != nil {
-		panic(err)
-	}
-
-	deleteHooks.Call(c, k)
+	deleteProject.Call(c, k)
 
 	w.WriteHeader(204)
 }
