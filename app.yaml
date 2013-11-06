@@ -43,6 +43,10 @@ handlers:
   script: _go_app
   login: optional
 
+- url: /public/.*
+  script: _go_app
+  login: optional
+
 - url: .*
   script: _go_app
   login: required

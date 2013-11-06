@@ -29,6 +29,7 @@ var dlOldest = mustParseTs("2006-01-02T04", dlOldestStr)
 
 func init() {
 	http.Handle("/cron/download", appstats.NewHandler(cronDownload))
+	http.Handle("/public/interesting", appstats.NewHandler(interesting))
 }
 
 func mustParseTs(f, s string) time.Time {
@@ -199,4 +200,14 @@ func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(204)
+}
+
+func interesting(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	i, err := loadInterestingRepos(c)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	mustEncode(w, i)
 }
