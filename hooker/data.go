@@ -13,6 +13,14 @@ type Project struct {
 	Hooks    []string  `json:"hooks"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
+	Group    *datastore.Key
+
+	Key *datastore.Key `datastore:"-"`
+}
+
+type Group struct {
+	Name    string   `json:"name"`
+	Members []string `json:"members"`
 
 	Key *datastore.Key `datastore:"-"`
 }

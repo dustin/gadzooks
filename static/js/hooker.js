@@ -14,6 +14,10 @@ function DashboardCtrl($scope, $http) {
         $scope.projects = data;
     });
 
+    $http.get("/api/groups").success(function(data) {
+        $scope.groups = data;
+    });
+
     $scope.repo = $scope.dest = "";
 
     $scope.newname = "";
@@ -87,6 +91,52 @@ function DashboardCtrl($scope, $http) {
                    {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
             success(function(e) {
                 $scope.projects = _.without($scope.projects, t);
+            });
+    };
+
+    $scope.newGroupName = "";
+    $scope.newGroup = function() {
+        $http.post("/api/groups/new", "name=" + encodeURIComponent($scope.newGroupName),
+                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+            success(function(e) {
+                $scope.newGroupName = "";
+                $scope.groups.push(e);
+            });
+    };
+
+
+    var updateGroup = function(g) {
+        console.log("Updating", g);
+        var params = "name=" + g.name + "&key=" + encodeURIComponent(g.Key);
+        for (var i = 0; i < (g.members || []).length; i++) {
+            params += "&members=" + encodeURIComponent(g.members[i]);
+        }
+        $http.post("/api/groups/update", params,
+                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+            success(function(data) {
+                g.newMember = "";
+            });
+    };
+
+    $scope.rmGroupMember = function(g, e) {
+        console.log("Removing", e, "from", g);
+        g.members = _.without(g.members, e);
+        updateGroup(g);
+    };
+
+    $scope.addGroupMember = function(g) {
+        g.members = g.members || [];
+        g.members.push(g.newMember)
+        updateGroup(g);
+    };
+
+    $scope.rmGroup = function(g) {
+        $http.post("/api/groups/rm", "key=" + encodeURIComponent(g.Key),
+                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+            success(function(data) {
+                $scope.groups = _.filter($scope.groups, function(e) {
+                    return e.Key != g.Key;
+                });
             });
     };
 
