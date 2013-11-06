@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"appengine"
@@ -99,13 +100,100 @@ var deleteProject = delay.Func("deleteProject", func(c appengine.Context, pkey *
 	return err
 })
 
-func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	results := []Project{}
+func groupProjects(c appengine.Context, gkey *datastore.Key) ([]*datastore.Key, error) {
+	q := datastore.NewQuery("Project").Filter("Group = ", gkey).KeysOnly()
+	return q.GetAll(c, nil)
+}
 
-	q := datastore.NewQuery("Project").
-		Filter("Owner = ", user.Current(c).Email).
-		Order("Name")
-	keys, err := q.GetAll(c, &results)
+func generateKeys(c appengine.Context, q *datastore.Query,
+	ch chan *datastore.Key, ech chan error, qch chan bool, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	keys, err := q.KeysOnly().GetAll(c, nil)
+	if err != nil {
+		select {
+		case ech <- err:
+		case <-qch:
+			return
+		}
+		return
+	}
+	for _, k := range keys {
+		select {
+		case ch <- k:
+		case <-qch:
+			return
+		}
+	}
+}
+
+func waitForKeys(ch chan *datastore.Key, ech chan error, qch chan bool,
+	wg *sync.WaitGroup) (map[string]*datastore.Key, error) {
+
+	rv := map[string]*datastore.Key{}
+
+	done := make(chan bool)
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	var err error
+
+	for {
+		select {
+		case k := <-ch:
+			rv[k.Encode()] = k
+		case err = <-ech:
+		case <-done:
+			return rv, err
+		}
+	}
+}
+
+func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	ch := make(chan *datastore.Key)
+	ech := make(chan error)
+	qch := make(chan bool)
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go generateKeys(c, datastore.NewQuery("Project").
+		Filter("Owner = ", user.Current(c).Email),
+		ch, ech, qch, wg)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		q := datastore.NewQuery("Group").Filter("Members =", user.Current(c).Email)
+		keys, err := q.KeysOnly().GetAll(c, nil)
+		if err != nil {
+			select {
+			case ech <- err:
+			default:
+			}
+			return
+		}
+		for _, k := range keys {
+			wg.Add(1)
+			go generateKeys(c, datastore.NewQuery("Project").Filter("Group =", k),
+				ch, ech, qch, wg)
+		}
+	}()
+
+	keysM, err := waitForKeys(ch, ech, qch, wg)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	var keys []*datastore.Key
+	for _, k := range keysM {
+		keys = append(keys, k)
+	}
+
+	results := make([]Project, len(keys))
+	err = datastore.GetMulti(c, keys, results)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
