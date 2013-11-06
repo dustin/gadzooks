@@ -105,15 +105,14 @@ func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	q := datastore.NewQuery("Project").
 		Filter("Owner = ", user.Current(c).Email).
 		Order("Name")
+	keys, err := q.GetAll(c, &results)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
-	for t := q.Run(c); ; {
-		var x Project
-		k, err := t.Next(&x)
-		if err != nil {
-			break
-		}
-		x.Key = k
-		results = append(results, x)
+	for i := range keys {
+		results[i].Key = keys[i]
 	}
 
 	mustEncode(w, results)
