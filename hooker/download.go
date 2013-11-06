@@ -170,8 +170,9 @@ func loadInterestingRepos(c appengine.Context) (map[string]int, error) {
 			found[x.Repo]++
 		}
 		item = &memcache.Item{
-			Key:    interestKey,
-			Object: found,
+			Key:        interestKey,
+			Object:     found,
+			Expiration: expirationTime,
 		}
 		return found, memcache.JSON.Set(c, item)
 	}
