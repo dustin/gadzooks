@@ -12,6 +12,7 @@ import (
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/memcache"
 	"appengine/taskqueue"
 	"appengine/urlfetch"
 
@@ -21,6 +22,7 @@ import (
 const (
 	dlOldestStr = "2013-11-02T00"
 	archiveu    = "http://data.githubarchive.org/"
+	interestKey = "interesting"
 )
 
 var dlOldest = mustParseTs("2006-01-02T04", dlOldestStr)
@@ -72,7 +74,7 @@ func storeLatestDownload(c appengine.Context, t time.Time) error {
 	return err
 }
 
-func eventProcessor(c appengine.Context, repos map[string]bool,
+func eventProcessor(c appengine.Context, repos map[string]int,
 	ch chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -92,7 +94,7 @@ func eventProcessor(c appengine.Context, repos map[string]bool,
 		}
 
 		rname := repo.Repository.Owner + "/" + repo.Repository.Name
-		if repos[rname] {
+		if repos[rname] > 0 {
 			form := url.Values{"payload": []string{string(data)}}
 			_, err = taskqueue.Add(c,
 				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
@@ -103,7 +105,7 @@ func eventProcessor(c appengine.Context, repos map[string]bool,
 	}
 }
 
-func processFile(c appengine.Context, repos map[string]bool, fn string) error {
+func processFile(c appengine.Context, repos map[string]int, fn string) error {
 	c.Infof("Downloading %v", fn)
 	start := time.Now()
 	h := urlfetch.Client(c)
@@ -151,25 +153,31 @@ func processFile(c appengine.Context, repos map[string]bool, fn string) error {
 	return nil
 }
 
-func loadInterestingRepos(c appengine.Context) (map[string]bool, error) {
-	q := datastore.NewQuery("Hook")
-	found := map[string]bool{}
-	for t := q.Run(c); ; {
-		var x Hook
-		_, err := t.Next(&x)
-		if err == datastore.Done {
-			break
-		} else if err != nil {
-			return nil, err
-		}
+func loadInterestingRepos(c appengine.Context) (map[string]int, error) {
+	found := map[string]int{}
+	if item, err := memcache.JSON.Get(c, interestKey, &found); err == memcache.ErrCacheMiss {
+		q := datastore.NewQuery("Hook")
+		for t := q.Run(c); ; {
+			var x Hook
+			_, err := t.Next(&x)
+			if err == datastore.Done {
+				break
+			} else if err != nil {
+				return nil, err
+			}
 
-		found[x.Repo] = true
+			found[x.Repo]++
+		}
+		item = &memcache.Item{
+			Key:    interestKey,
+			Object: found,
+		}
+		return found, memcache.JSON.Set(c, item)
 	}
 	return found, nil
 }
 
 func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-
 	repos, err := loadInterestingRepos(c)
 	if err != nil {
 		panic(err)

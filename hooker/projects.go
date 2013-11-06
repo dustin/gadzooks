@@ -9,6 +9,7 @@ import (
 	"appengine"
 	"appengine/datastore"
 	"appengine/delay"
+	"appengine/memcache"
 	"appengine/user"
 
 	"github.com/mjibson/appstats"
@@ -22,7 +23,7 @@ func init() {
 }
 
 var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastore.Key) error {
-	return datastore.RunInTransaction(c, func(tc appengine.Context) error {
+	err := datastore.RunInTransaction(c, func(tc appengine.Context) error {
 		project := &Project{}
 		err := datastore.Get(tc, pkey, project)
 		if err != nil {
@@ -60,6 +61,11 @@ var syncHooks = delay.Func("syncHooks", func(c appengine.Context, pkey *datastor
 		return err
 	}, nil)
 
+	if err == nil {
+		memcache.Delete(c, interestKey)
+	}
+	return err
+
 })
 
 var deleteHooks = delay.Func("deleteHooks", func(c appengine.Context, pkey *datastore.Key) error {
@@ -69,7 +75,12 @@ var deleteHooks = delay.Func("deleteHooks", func(c appengine.Context, pkey *data
 		return err
 	}
 
-	return datastore.DeleteMulti(c, keys)
+	err = datastore.DeleteMulti(c, keys)
+
+	if err == nil {
+		memcache.Delete(c, interestKey)
+	}
+	return err
 })
 
 func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
