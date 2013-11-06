@@ -36,15 +36,9 @@ func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
 	if item, err := memcache.JSON.Get(c, cacheKey, &rv); err == memcache.ErrCacheMiss {
 		c.Infof("Reconstructing cache for %v", repo)
 		q := datastore.NewQuery("Hook").Filter("Repo = ", repo)
-		for t := q.Run(c); ; {
-			var x Hook
-			k, err := t.Next(&x)
-			if err != nil {
-				break
-			}
-			x.Key = k
-
-			rv = append(rv, &x)
+		_, err := q.GetAll(c, &rv)
+		if err != nil {
+			return nil, err
 		}
 
 		item = &memcache.Item{
