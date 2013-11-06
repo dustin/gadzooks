@@ -3,6 +3,14 @@
 <div class="project" ng-repeat="p in projects">
   <h2>{{p.name}} <button ng-click="rmProject(p)">X</button></h2>
 
+  <form ng-submit="changeGroup(p)">
+    Group: <select ng-model="p.Group" name="group"
+                   ng-change="changeGroup(p)"
+                   ng-options="g.Key as g.name for g in groups">
+      <option value="">-none-</option>
+      <select>
+  </form>
+
   <h3>Deps</h3>
   <ul>
     <li ng-repeat="d in p.deps">
@@ -29,7 +37,12 @@
 <h2>New Project</h2>
 
 <form ng-submit="newProject()">
-  <label>Name: <input name="name" ng-model="newname" /></label><br/>
+  <label>Name: <input name="name" ng-model="newname" /></label>
+  Group: <select ng-model="newgroup" name="group"
+                 ng-options="g.Key as g.name for g in groups">
+    <option value="">-none-</option>
+    <select>
+  <br/>
   <label>Deps (space separated): <input name="deps" size="80" ng-model="newdeps" ng-list="/ /"/></label><br/>
   <label>Hooks (space separated): <input name="hooks" size="80" ng-model="newhooks" ng-list="/ /"/></label><br/>
   <input type="submit" value="Save" />

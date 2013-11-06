@@ -7,13 +7,13 @@ import (
 )
 
 type Project struct {
-	Owner    string    `json:"owner"`
-	Name     string    `json:"name"`
-	Deps     []string  `json:"deps"`
-	Hooks    []string  `json:"hooks"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-	Group    *datastore.Key
+	Owner    string         `json:"owner"`
+	Name     string         `json:"name"`
+	Deps     []string       `json:"deps"`
+	Hooks    []string       `json:"hooks"`
+	Created  time.Time      `json:"created"`
+	Modified time.Time      `json:"modified"`
+	Group    *datastore.Key `json:"Group,omitempty"`
 
 	Key *datastore.Key `datastore:"-"`
 }

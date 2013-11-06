@@ -21,12 +21,14 @@ function DashboardCtrl($scope, $http) {
     $scope.repo = $scope.dest = "";
 
     $scope.newname = "";
+    $scope.newgroup = "";
     $scope.newdeps = [];
     $scope.newhooks = [];
 
     $scope.newProject = function() {
         console.log("Creating a project.");
-        var params = "name=" + $scope.newname;
+        var params = "name=" + encodeURIComponent($scope.newname)
+            + "&group=" + encodeURIComponent($scope.newgroup);
         for (var i = 0; i < $scope.newdeps.length; i++) {
             params += "&deps=" + encodeURIComponent($scope.newdeps[i]);
         }
@@ -36,7 +38,7 @@ function DashboardCtrl($scope, $http) {
         $http.post("/api/projects/new", params,
                    {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
             success(function(data) {
-                $scope.newname;
+                $scope.newname = $scope.newgroup = "";
                 $scope.newdeps = [];
                 $scope.newhooks = [];
                 $scope.projects.push(data);
@@ -45,7 +47,8 @@ function DashboardCtrl($scope, $http) {
 
     var updateProject = function(p) {
         console.log("Updating", p);
-        var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key);
+        var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key) +
+            "&group=" + encodeURIComponent(p.Group);
         for (var i = 0; i < (p.deps || []).length; i++) {
             params += "&deps=" + encodeURIComponent(p.deps[i]);
         }
@@ -57,6 +60,10 @@ function DashboardCtrl($scope, $http) {
             success(function(data) {
                 p.newdep = p.newhook = "";
             });
+    };
+
+    $scope.changeGroup = function(p) {
+        updateProject(p);
     };
 
     $scope.rmProjectDep = function(p, d) {

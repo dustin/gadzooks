@@ -118,6 +118,11 @@ func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, results)
 }
 
+func maybeKey(s string) *datastore.Key {
+	k, _ := datastore.DecodeKey(s)
+	return k
+}
+
 func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	t := time.Now().UTC()
 
@@ -126,6 +131,7 @@ func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		Name:     strings.TrimSpace(r.FormValue("name")),
 		Deps:     r.Form["deps"],
 		Hooks:    r.Form["hooks"],
+		Group:    maybeKey(r.FormValue("group")),
 		Created:  t,
 		Modified: t,
 	}
@@ -160,6 +166,7 @@ var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.V
 	project.Name = form.Get("name")
 	project.Deps = form["deps"]
 	project.Hooks = form["hooks"]
+	project.Group = maybeKey(form.Get("group"))
 
 	c.Infof("Delayed update of %v for %v", project.Name, project.Owner)
 
