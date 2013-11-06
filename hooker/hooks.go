@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	maxBody        = 64 * 1024
+	maxBody        = 256 * 1024
 	expirationTime = 86400 * time.Second
 )
 

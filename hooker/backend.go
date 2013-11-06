@@ -1,11 +1,20 @@
 package hooker
 
 import (
+	"bytes"
+	"fmt"
+	"hash/crc64"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"net/url"
+	"time"
 
 	"appengine"
+	"appengine/memcache"
 	"appengine/urlfetch"
 
+	"github.com/dustin/go-jsonpointer"
 	"github.com/mjibson/appstats"
 )
 
@@ -22,11 +31,53 @@ func hookDeliveryError(c appengine.Context, r *http.Request, err error) {
 		r.Header.Get("x-owner"), err)
 }
 
+var c64tab = crc64.MakeTable(crc64.ISO)
+
+func hasSeen(c appengine.Context, dest, hashstr string) bool {
+	h := crc64.New(c64tab)
+	h.Write([]byte(dest))
+
+	itm := &memcache.Item{
+		Key:        fmt.Sprintf("seen-%v-%x", hashstr, h.Sum(nil)),
+		Expiration: 2 * time.Hour,
+	}
+
+	return memcache.Add(c, itm) != nil
+}
+
 func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	var b io.Reader = r.Body
+	if r.Header.Get("content-type") == "application/x-www-form-urlencoded" {
+		bod, err := ioutil.ReadAll(io.LimitReader(r.Body, maxBody))
+		if err != nil {
+			panic(err)
+		}
+		form, err := url.ParseQuery(string(bod))
+		if err != nil {
+			panic(err)
+		}
+		b = bytes.NewReader(bod)
+
+		j := []byte(form.Get("payload"))
+		var hashstr string
+		err = jsonpointer.FindDecode(j, "/after", &hashstr)
+		if err != nil {
+			err = jsonpointer.FindDecode(j, "/payload/head", &hashstr)
+		}
+		if err == nil {
+			if hasSeen(c, r.Header.Get("x-dest"), hashstr) {
+				c.Infof("Already processed %v -> %v",
+					hashstr, r.Header.Get("x-dest"))
+				return
+			}
+		} else {
+			c.Infof("Can't find head, not trying to avoid it.")
+		}
+	}
 	req, err := http.NewRequest(
 		r.Header.Get("x-method"),
 		r.Header.Get("x-dest"),
-		r.Body)
+		ioutil.NopCloser(b))
 	if err != nil {
 		hookDeliveryError(c, r, err)
 		return
