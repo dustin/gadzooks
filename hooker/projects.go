@@ -178,14 +178,13 @@ func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) 
 }
 
 func rmProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
-	tid := r.FormValue("key")
-
-	k, err := datastore.DecodeKey(tid)
+	k, err := datastore.DecodeKey(r.FormValue("key"))
 	if err != nil {
-		panic(err)
+		http.Error(w, "Can't decode key", 400)
+		return
 	}
 
 	deleteProject.Call(c, k)
 
-	w.WriteHeader(204)
+	w.WriteHeader(202)
 }
