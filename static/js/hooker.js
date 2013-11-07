@@ -160,7 +160,6 @@ function DashboardCtrl($scope, $http, groups, projects) {
     $scope.newhooks = [];
 
     $scope.newProject = function() {
-        console.log("Creating a project.");
         projects.add($scope.newname, $scope.newgroup, $scope.newdeps, $scope.newhooks).then(
             function(data) {
                 $scope.newname = $scope.newgroup = "";
@@ -186,8 +185,6 @@ function GroupCtrl($scope, $http, groups) {
             g.newMember = "";
         });
     };
-
-    $scope.rmGroup = function(g) { groups.rm(g.Key); };
 
     $scope.newGroupName = "";
     $scope.newGroup = function() {

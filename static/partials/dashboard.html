@@ -54,7 +54,7 @@
   <h2>Groups</h2>
 
   <div class="group" ng-repeat="g in groups.list">
-    <h3>{{g.name}}  <button ng-click="rmGroup(g)">X</button></h3>
+    <h3>{{g.name}}  <button ng-click="groups.rm(g.Key)">X</button></h3>
     <ul>
       <li ng-repeat="e in g.members">
         {{e}}
