@@ -6,3 +6,11 @@ queue:
   bucket_size: 25
   retry_parameters:
     task_age_limit: 3d
+
+- name: gharchive
+  rate: 1/m
+  max_concurrent_requests: 1
+  retry_parameters:
+    task_age_limit: 3d
+    min_backoff_seconds: 60
+    max_backoff_seconds: 300

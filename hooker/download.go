@@ -29,6 +29,7 @@ var dlOldest = mustParseTs("2006-01-02T04", dlOldestStr)
 
 func init() {
 	http.Handle("/cron/download", appstats.NewHandler(cronDownload))
+	http.Handle("/backend/ghadownload", appstats.NewHandler(ghaDownload))
 	http.Handle("/public/interesting", appstats.NewHandler(interesting))
 }
 
@@ -38,10 +39,6 @@ func mustParseTs(f, s string) time.Time {
 		panic(err)
 	}
 	return t
-}
-
-type dlState struct {
-	Latest time.Time
 }
 
 func genDates(from, to time.Time, by time.Duration) []time.Time {
@@ -55,24 +52,6 @@ func genDates(from, to time.Time, by time.Duration) []time.Time {
 func formatDate(t time.Time) string {
 	return fmt.Sprintf("%04d-%02d-%02d-%d",
 		t.Year(), t.Month(), t.Day(), t.Hour())
-}
-
-func latestDownload(c appengine.Context) (time.Time, error) {
-	k := datastore.NewKey(c, "DLState", "dlstate", 0, nil)
-	d := dlState{}
-	err := datastore.Get(c, k, &d)
-	if err == datastore.ErrNoSuchEntity {
-		err = nil
-		d.Latest = dlOldest
-	}
-	return d.Latest, err
-}
-
-func storeLatestDownload(c appengine.Context, t time.Time) error {
-	c.Infof("Snapshotting dl state to %v", t)
-	_, err := datastore.Put(c,
-		datastore.NewKey(c, "DLState", "dlstate", 0, nil), &dlState{t})
-	return err
 }
 
 func eventProcessor(c appengine.Context, repos map[string]int,
@@ -179,28 +158,34 @@ func loadInterestingRepos(c appengine.Context) (map[string]int, error) {
 	return found, nil
 }
 
-func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func ghaDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	repos, err := loadInterestingRepos(c)
 	if err != nil {
-		panic(err)
+		c.Errorf("Error loading repos: %v", err)
+		http.Error(w, "Error loading repos:  "+err.Error(), 500)
+		return
 	}
-
-	t, err := latestDownload(c)
+	err = processFile(c, repos, r.FormValue("fn"))
 	if err != nil {
-		panic(err)
-	}
-	for _, t = range genDates(t.Add(time.Hour), time.Now(), time.Hour) {
-		err := processFile(c, repos, formatDate(t))
-		if err != nil {
-			c.Infof("Stopping at %v because %v", t, err)
-			break
-		}
-		if err = storeLatestDownload(c, t); err != nil {
-			c.Warningf("Problem storing latest download timestamp (%v): %v",
-				t, err)
-		}
+		c.Errorf("Error processing file: %v", err)
+		http.Error(w, "Error processing file: "+err.Error(), 500)
+		return
 	}
 	w.WriteHeader(204)
+}
+
+func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+	loc, err := time.LoadLocation("US/Pacific")
+	if err != nil {
+		http.Error(w, "Can't find timezone: "+err.Error(), 500)
+		return
+	}
+	t := time.Now().Add(time.Hour * -1).In(loc)
+
+	taskqueue.Add(c, taskqueue.NewPOSTTask("/backend/ghadownload",
+		url.Values{"fn": []string{formatDate(t)}}), "gharchive")
+
+	w.WriteHeader(202)
 }
 
 func interesting(c appengine.Context, w http.ResponseWriter, r *http.Request) {
