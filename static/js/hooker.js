@@ -9,11 +9,8 @@ angular.module('hooker', []).
                 $locationProvider.hashPrefix('!');
             }]).
     factory('groups', function($http, $q) {
-        var gd = $q.defer();
-
         var rv = {
             list: [],
-            promise: gd.promise,
         };
 
         rv.add = function(name) {
@@ -70,9 +67,8 @@ angular.module('hooker', []).
         };
 
         $http.get("/api/groups").success(function(data) {
-            gd.resolve(data);
             rv.list = data;
-        }, gd.reject);
+        });
 
         return rv;
     });
