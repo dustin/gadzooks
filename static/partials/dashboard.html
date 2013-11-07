@@ -6,7 +6,7 @@
   <form ng-submit="changeGroup(p)">
     Group: <select ng-model="p.Group" name="group"
                    ng-change="changeGroup(p)"
-                   ng-options="g.Key as g.name for g in groups">
+                   ng-options="g.Key as g.name for g in groups.list">
       <option value="">-none-</option>
       <select>
   </form>
@@ -39,7 +39,7 @@
 <form ng-submit="newProject()">
   <label>Name: <input name="name" ng-model="newname" /></label>
   Group: <select ng-model="newgroup" name="group"
-                 ng-options="g.Key as g.name for g in groups">
+                 ng-options="g.Key as g.name for g in groups.list">
     <option value="">-none-</option>
     <select>
   <br/>
@@ -60,7 +60,7 @@
 
   <h3>Group List</h3>
 
-  <div class="group" ng-repeat="g in groups">
+  <div class="group" ng-repeat="g in groups.list">
     <h4>{{g.name}}  <button ng-click="rmGroup(g)">X</button></h4>
     <ul>
       <li ng-repeat="e in g.members">

@@ -7,14 +7,81 @@ angular.module('hooker', []).
                     otherwise({redirectTo: '/app/dashboard/'});
                 $locationProvider.html5Mode(true);
                 $locationProvider.hashPrefix('!');
-            }]);
+            }]).
+    factory('groups', function($http, $q) {
+        var gd = $q.defer();
 
-function DashboardCtrl($scope, $http) {
+        var rv = {
+            list: [],
+            promise: gd.promise,
+        };
+
+        rv.add = function(name) {
+            var d = $q.defer();
+
+            $http.post("/api/groups/new", "name=" + encodeURIComponent(name),
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(function(data) {
+                    d.resolve(data);
+                    rv.list.push(data);
+                }).error(d.reject);
+
+            return d.promise;
+        };
+
+        rv.rm = function(key) {
+            var d = $q.defer();
+
+            $http.post("/api/groups/rm", "key=" + encodeURIComponent(key),
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(function(data) {
+                    rv.list = _.filter(rv.list, function(e) {
+                        return e.Key != key;
+                    });
+                    d.resolve(data);
+                }).error(d.reject);
+
+            return d;
+        };
+
+        var updateGroup = function(g) {
+            var d = $q.defer();
+
+            var params = "name=" + g.name + "&key=" + encodeURIComponent(g.Key);
+            for (var i = 0; i < (g.members || []).length; i++) {
+                params += "&members=" + encodeURIComponent(g.members[i]);
+            }
+            $http.post("/api/groups/update", params,
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(d.resolve).error(d.reject);
+
+            return d.promise;
+        };
+
+        rv.addMember = function(g, member) {
+            g.members = g.members || [];
+            g.members.push(member);
+            return updateGroup(g);
+        };
+
+        rv.rmMember = function(g, member) {
+            g.members = _.without(g.members, member);
+            return updateGroup(g);
+        };
+
+        $http.get("/api/groups").success(function(data) {
+            gd.resolve(data);
+            rv.list = data;
+        }, gd.reject);
+
+        return rv;
+    });
+
+function DashboardCtrl($scope, $http, groups) {
+    $scope.groups = groups;
+
     $http.get("/api/projects").success(function(data) {
         $scope.projects = data;
-    });
-    $http.get("/api/groups").success(function(data) {
-        $scope.groups = data;
     });
 
     $scope.repo = $scope.dest = "";
@@ -102,51 +169,22 @@ function DashboardCtrl($scope, $http) {
 
 }
 
+function GroupCtrl($scope, $http, groups) {
+    $scope.groups = groups;
 
-function GroupCtrl($scope, $http) {
-    $scope.newGroupName = "";
-    $scope.newGroup = function() {
-        $http.post("/api/groups/new", "name=" + encodeURIComponent($scope.newGroupName),
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(e) {
-                $scope.newGroupName = "";
-                $scope.groups.push(e);
-            });
-    };
-
-
-    var updateGroup = function(g) {
-        console.log("Updating", g);
-        var params = "name=" + g.name + "&key=" + encodeURIComponent(g.Key);
-        for (var i = 0; i < (g.members || []).length; i++) {
-            params += "&members=" + encodeURIComponent(g.members[i]);
-        }
-        $http.post("/api/groups/update", params,
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(data) {
-                g.newMember = "";
-            });
-    };
-
-    $scope.rmGroupMember = function(g, e) {
-        console.log("Removing", e, "from", g);
-        g.members = _.without(g.members, e);
-        updateGroup(g);
-    };
+    $scope.rmGroupMember = groups.rmMember;
 
     $scope.addGroupMember = function(g) {
-        g.members = g.members || [];
-        g.members.push(g.newMember)
-        updateGroup(g);
+        groups.addMember(g, g.newMember).then(function(data) {
+            g.newMember = "";
+        });
     };
 
-    $scope.rmGroup = function(g) {
-        $http.post("/api/groups/rm", "key=" + encodeURIComponent(g.Key),
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(data) {
-                $scope.groups = _.filter($scope.groups, function(e) {
-                    return e.Key != g.Key;
-                });
-            });
+    $scope.rmGroup = function(g) { groups.rm(g.Key); };
+
+    $scope.newGroupName = "";
+    $scope.newGroup = function() {
+        groups.add($scope.newGroupName).
+            then(function(data) { $scope.newGroupName = ""; })
     };
 }
