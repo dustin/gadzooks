@@ -50,24 +50,26 @@
 
 <hr/>
 
-<h2>Groups</h2>
+<div ng-controller="GroupCtrl">
+  <h2>Groups</h2>
 
-<form ng-submit="newGroup()">
-  <label>New Group: <input name="name" ng-model="newGroupName" /></label>
-  <input type="submit" value="Create" />
-</form>
-
-<h3>Group List</h3>
-
-<div class="group" ng-repeat="g in groups">
-  <h4>{{g.name}}  <button ng-click="rmGroup(g)">X</button></h4>
-  <ul>
-    <li ng-repeat="e in g.members">
-      {{e}}
-      <button ng-click="rmGroupMember(g, e)">X</button>
-    </li>
-  </ul>
-  <form ng-submit="addGroupMember(g)">
-    Add a member to {{g.name}}:  <input size="80" ng-model="g.newMember"/>
+  <form ng-submit="newGroup()">
+    <label>New Group: <input name="name" ng-model="newGroupName" /></label>
+    <input type="submit" value="Create" />
   </form>
+
+  <h3>Group List</h3>
+
+  <div class="group" ng-repeat="g in groups">
+    <h4>{{g.name}}  <button ng-click="rmGroup(g)">X</button></h4>
+    <ul>
+      <li ng-repeat="e in g.members">
+        {{e}}
+        <button ng-click="rmGroupMember(g, e)">X</button>
+      </li>
+    </ul>
+    <form ng-submit="addGroupMember(g)">
+      Add a member to {{g.name}}:  <input size="80" ng-model="g.newMember"/>
+    </form>
+  </div>
 </div>

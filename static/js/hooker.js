@@ -13,7 +13,6 @@ function DashboardCtrl($scope, $http) {
     $http.get("/api/projects").success(function(data) {
         $scope.projects = data;
     });
-
     $http.get("/api/groups").success(function(data) {
         $scope.groups = data;
     });
@@ -101,6 +100,10 @@ function DashboardCtrl($scope, $http) {
             });
     };
 
+}
+
+
+function GroupCtrl($scope, $http) {
     $scope.newGroupName = "";
     $scope.newGroup = function() {
         $http.post("/api/groups/new", "name=" + encodeURIComponent($scope.newGroupName),
@@ -146,5 +149,4 @@ function DashboardCtrl($scope, $http) {
                 });
             });
     };
-
 }
