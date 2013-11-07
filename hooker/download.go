@@ -20,12 +20,9 @@ import (
 )
 
 const (
-	dlOldestStr = "2013-11-02T00"
 	archiveu    = "http://data.githubarchive.org/"
 	interestKey = "interesting"
 )
-
-var dlOldest = mustParseTs("2006-01-02T04", dlOldestStr)
 
 func init() {
 	http.Handle("/cron/download", appstats.NewHandler(cronDownload))
