@@ -1,4 +1,4 @@
 cron:
 - description: download things
   url: /cron/download
-  schedule: every 1 hours from 00:03 to 23:03
+  schedule: every 1 hours from 00:10 to 23:10
