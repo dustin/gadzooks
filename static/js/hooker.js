@@ -71,16 +71,88 @@ angular.module('hooker', []).
         });
 
         return rv;
+    }).
+    factory('projects', function($http, $q) {
+        var rv = { list: [] };
+
+        $http.get("/api/projects").success(function(data) {
+            rv.list = data;
+        });
+
+        rv.add = function(name, group, deps, hooks) {
+            var d = $q.defer();
+            var params = "name=" + encodeURIComponent(name)
+                + "&group=" + encodeURIComponent(group);
+            for (var i = 0; i < deps.length; i++) {
+                params += "&deps=" + encodeURIComponent(deps[i]);
+            }
+            for (var i = 0; i < hooks.length; i++) {
+                params += "&hooks=" + encodeURIComponent(hooks[i]);
+            }
+            $http.post("/api/projects/new", params,
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(function(data) {
+                    rv.list.push(data);
+                    d.resolve(data);
+                }).error(d.reject);
+
+            return d.promise;
+        };
+
+        rv.rm = function(p) {
+            $http.post("/api/projects/rm", "key=" + encodeURIComponent(p.Key),
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(function(e) {
+                    rv.list = _.without(rv.list, p);
+                });
+        };
+
+        rv.updateProject = function(p) {
+            var d = $q.defer();
+
+            var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key) +
+                "&group=" + encodeURIComponent(p.Group);
+            for (var i = 0; i < (p.deps || []).length; i++) {
+                params += "&deps=" + encodeURIComponent(p.deps[i]);
+            }
+            for (var i = 0; i < (p.hooks || []).length; i++) {
+                params += "&hooks=" + encodeURIComponent(p.hooks[i]);
+            }
+            $http.post("/api/projects/update", params,
+                       {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
+                success(d.resolve).error(d.reject);
+
+            return d.promise;
+        };
+
+        rv.rmDep = function(p, dep) {
+            p.deps = _.without(p.deps, dep);
+            return rv.updateProject(p);
+        };
+
+        rv.addDep = function(p, dep) {
+            p.deps = p.deps || [];
+            p.deps.push(dep);
+            return rv.updateProject(p);
+        };
+
+        rv.rmHook = function(p, hook) {
+            p.hooks = _.without(p.hooks, hook);
+            return rv.updateProject(p);
+        };
+
+        rv.addHook = function(p, hook) {
+            p.hooks = p.hooks || [];
+            p.hooks.push(hook);
+            return rv.updateProject(p);
+        };
+
+        return rv;
     });
 
-function DashboardCtrl($scope, $http, groups) {
+function DashboardCtrl($scope, $http, groups, projects) {
     $scope.groups = groups;
-
-    $http.get("/api/projects").success(function(data) {
-        $scope.projects = data;
-    });
-
-    $scope.repo = $scope.dest = "";
+    $scope.projects = projects;
 
     $scope.newname = "";
     $scope.newgroup = "";
@@ -89,80 +161,29 @@ function DashboardCtrl($scope, $http, groups) {
 
     $scope.newProject = function() {
         console.log("Creating a project.");
-        var params = "name=" + encodeURIComponent($scope.newname)
-            + "&group=" + encodeURIComponent($scope.newgroup);
-        for (var i = 0; i < $scope.newdeps.length; i++) {
-            params += "&deps=" + encodeURIComponent($scope.newdeps[i]);
-        }
-        for (var i = 0; i < $scope.newhooks.length; i++) {
-            params += "&hooks=" + encodeURIComponent($scope.newhooks[i]);
-        }
-        $http.post("/api/projects/new", params,
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(data) {
+        projects.add($scope.newname, $scope.newgroup, $scope.newdeps, $scope.newhooks).then(
+            function(data) {
                 $scope.newname = $scope.newgroup = "";
                 $scope.newdeps = [];
                 $scope.newhooks = [];
-                $scope.projects.push(data);
             });
     };
 
-    var updateProject = function(p) {
-        console.log("Updating", p);
-        var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key) +
-            "&group=" + encodeURIComponent(p.Group);
-        for (var i = 0; i < (p.deps || []).length; i++) {
-            params += "&deps=" + encodeURIComponent(p.deps[i]);
-        }
-        for (var i = 0; i < (p.hooks || []).length; i++) {
-            params += "&hooks=" + encodeURIComponent(p.hooks[i]);
-        }
-        $http.post("/api/projects/update", params,
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(data) {
-                p.newdep = p.newhook = "";
-            });
-    };
+    $scope.changeGroup = projects.updateProject;
 
-    $scope.changeGroup = function(p) {
-        updateProject(p);
-    };
+    $scope.rmProjectDep = projects.rmDep;
 
-    $scope.rmProjectDep = function(p, d) {
-        console.log("Removing", d, "from", p);
-        p.deps = _.without(p.deps, d);
-        updateProject(p);
-    };
-
-    $scope.rmProjectHook = function(p, h) {
-        console.log("Removing", h, "from", p);
-        p.hooks = _.without(p.hooks, h);
-        updateProject(p);
-    };
+    $scope.rmProjectHook = projects.rmHook;
 
     $scope.addDep = function(p) {
-        console.log("Adding", p.newdep, "to", p);
-        p.deps = p.deps || [];
-        p.deps.push(p.newdep);
-        updateProject(p);
+        projetcs.addDep(p, p.newdep).then(function() { p.newdep = ""; });
     };
 
     $scope.addHook = function(p) {
-        console.log("Adding", p.newhook, "to", p);
-        p.hooks = p.hooks || [];
-        p.hooks.push(p.newhook);
-        updateProject(p);
+        projects.addHook(p, p.newhook).then(function() { p.newhook = ""; });
     };
 
-    $scope.rmProject = function(t) {
-        console.log("Removing", t);
-        $http.post("/api/projects/rm", "key=" + encodeURIComponent(t.Key),
-                   {headers: {"Content-Type": "application/x-www-form-urlencoded"}}).
-            success(function(e) {
-                $scope.projects = _.without($scope.projects, t);
-            });
-    };
-
+    $scope.rmProject = projects.rm;
 }
 
 function GroupCtrl($scope, $http, groups) {

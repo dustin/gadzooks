@@ -1,6 +1,6 @@
 <h1>Project Dashboard</h1>
 
-<div class="project" ng-repeat="p in projects">
+<div class="project" ng-repeat="p in projects.list">
   <h2>{{p.name}} <button ng-click="rmProject(p)">X</button></h2>
 
   <form ng-submit="changeGroup(p)">
