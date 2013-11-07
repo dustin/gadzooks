@@ -3,13 +3,13 @@
 <div class="project" ng-repeat="p in projects.list">
   <h2>{{p.name}} <button ng-click="projects.rm(p)">X</button></h2>
 
-  <form ng-submit="projets.updateProject(p)">
+  <h3>
     Group: <select ng-model="p.Group" name="group"
-                   ng-change="changeGroup(p)"
+                   ng-change="projects.update(p)"
                    ng-options="g.Key as g.name for g in groups.list">
       <option value="">-none-</option>
       <select>
-  </form>
+  </h3>
 
   <h3>Deps</h3>
   <ul>

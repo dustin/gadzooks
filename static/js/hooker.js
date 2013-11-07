@@ -107,7 +107,7 @@ angular.module('hooker', []).
                 });
         };
 
-        rv.updateProject = function(p) {
+        rv.update = function(p) {
             var d = $q.defer();
 
             var params = "name=" + p.name + "&key=" + encodeURIComponent(p.Key) +
@@ -127,24 +127,24 @@ angular.module('hooker', []).
 
         rv.rmDep = function(p, dep) {
             p.deps = _.without(p.deps, dep);
-            return rv.updateProject(p);
+            return rv.update(p);
         };
 
         rv.addDep = function(p, dep) {
             p.deps = p.deps || [];
             p.deps.push(dep);
-            return rv.updateProject(p);
+            return rv.update(p);
         };
 
         rv.rmHook = function(p, hook) {
             p.hooks = _.without(p.hooks, hook);
-            return rv.updateProject(p);
+            return rv.update(p);
         };
 
         rv.addHook = function(p, hook) {
             p.hooks = p.hooks || [];
             p.hooks.push(hook);
-            return rv.updateProject(p);
+            return rv.update(p);
         };
 
         return rv;
