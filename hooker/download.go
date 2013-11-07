@@ -165,7 +165,7 @@ func ghaDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	err = processFile(c, repos, r.FormValue("fn"))
 	if err != nil {
 		c.Errorf("Error processing file: %v", err)
-		http.Error(w, "Error processing file: "+err.Error(), 500)
+		http.Error(w, "Error processing file: "+err.Error(), 503)
 		return
 	}
 	w.WriteHeader(204)
