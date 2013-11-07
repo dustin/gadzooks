@@ -169,12 +169,6 @@ function DashboardCtrl($scope, $http, groups, projects) {
             });
     };
 
-    $scope.changeGroup = projects.updateProject;
-
-    $scope.rmProjectDep = projects.rmDep;
-
-    $scope.rmProjectHook = projects.rmHook;
-
     $scope.addDep = function(p) {
         projetcs.addDep(p, p.newdep).then(function() { p.newdep = ""; });
     };
@@ -182,14 +176,10 @@ function DashboardCtrl($scope, $http, groups, projects) {
     $scope.addHook = function(p) {
         projects.addHook(p, p.newhook).then(function() { p.newhook = ""; });
     };
-
-    $scope.rmProject = projects.rm;
 }
 
 function GroupCtrl($scope, $http, groups) {
     $scope.groups = groups;
-
-    $scope.rmGroupMember = groups.rmMember;
 
     $scope.addGroupMember = function(g) {
         groups.addMember(g, g.newMember).then(function(data) {

@@ -1,9 +1,9 @@
 <h1>Project Dashboard</h1>
 
 <div class="project" ng-repeat="p in projects.list">
-  <h2>{{p.name}} <button ng-click="rmProject(p)">X</button></h2>
+  <h2>{{p.name}} <button ng-click="projects.rm(p)">X</button></h2>
 
-  <form ng-submit="changeGroup(p)">
+  <form ng-submit="projets.updateProject(p)">
     Group: <select ng-model="p.Group" name="group"
                    ng-change="changeGroup(p)"
                    ng-options="g.Key as g.name for g in groups.list">
@@ -14,7 +14,7 @@
   <h3>Deps</h3>
   <ul>
     <li ng-repeat="d in p.deps">
-      {{d}} <button ng-click="rmProjectDep(p, d)">X</button>
+      {{d}} <button ng-click="projects.rmDep(p, d)">X</button>
     </li>
   </ul>
   <form ng-submit="addDep(p)">
@@ -24,7 +24,7 @@
   <h3>Hooks</h3>
   <ul>
     <li ng-repeat="h in p.hooks">
-      {{h}} <button ng-click="rmProjectHook(p, h)">X</button>
+      {{h}} <button ng-click="projects.rmHook(p, h)">X</button>
     </li>
   </ul>
   <form ng-submit="addHook(p)">
@@ -65,7 +65,7 @@
     <ul>
       <li ng-repeat="e in g.members">
         {{e}}
-        <button ng-click="rmGroupMember(g, e)">X</button>
+        <button ng-click="groups.rmMember(g, e)">X</button>
       </li>
     </ul>
     <form ng-submit="addGroupMember(g)">
