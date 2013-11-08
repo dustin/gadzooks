@@ -1,4 +1,4 @@
-angular.module('hooker', []).
+angular.module('gadzooks', []).
     config(['$routeProvider', '$locationProvider',
             function($routeProvider, $locationProvider) {
                 $routeProvider.

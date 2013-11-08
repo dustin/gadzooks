@@ -1,4 +1,4 @@
-package hooker
+package gadzooks
 
 import (
 	"encoding/json"
