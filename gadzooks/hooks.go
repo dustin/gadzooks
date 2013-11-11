@@ -77,6 +77,10 @@ func isGithubRepo(repo string, r *http.Request) bool {
 }
 
 func authenticateRepo(repo string, r *http.Request) error {
+	if r.RemoteAddr == "0.1.0.2" {
+		// task queue internal address
+		return nil
+	}
 	if isGithubRepo(repo, r) {
 		remote := net.ParseIP(r.RemoteAddr)
 		if !githubBlock.Contains(remote) {
