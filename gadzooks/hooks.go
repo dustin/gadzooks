@@ -3,7 +3,9 @@ package gadzooks
 import (
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"appengine/memcache"
 	"appengine/taskqueue"
 
+	"fmt"
 	"github.com/mjibson/appstats"
 )
 
@@ -20,8 +23,16 @@ const (
 	expirationTime = 86400 * time.Second
 )
 
+var githubBlock *net.IPNet
+
 func init() {
 	http.Handle("/deliver/", appstats.NewHandler(queueHook))
+
+	_, inet, err := net.ParseCIDR("192.30.252.0/22")
+	if err != nil {
+		panic(err)
+	}
+	githubBlock = inet
 }
 
 func repoKey(repo string) string {
@@ -61,8 +72,29 @@ func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
 	return rv, nil
 }
 
+func isGithubRepo(repo string, r *http.Request) bool {
+	return len(strings.Split(repo, "/")) == 2
+}
+
+func authenticateRepo(repo string, r *http.Request) error {
+	if isGithubRepo(repo, r) {
+		remote := net.ParseIP(r.RemoteAddr)
+		if !githubBlock.Contains(remote) {
+			return fmt.Errorf("Invalid github block: %v", remote)
+		}
+	}
+	return nil
+}
+
 func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	repo := r.URL.Path[len("/deliver/"):]
+
+	if err := authenticateRepo(repo, r); err != nil {
+		c.Warningf("Unauthorized trigger for %v: %v", repo, err)
+		http.Error(w, err.Error(), 403)
+		return
+	}
+
 	hooks, err := findHooks(c, repo)
 	if err != nil {
 		panic(err)
