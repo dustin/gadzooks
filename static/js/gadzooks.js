@@ -169,7 +169,7 @@ function DashboardCtrl($scope, $http, groups, projects) {
     };
 
     $scope.addDep = function(p) {
-        projetcs.addDep(p, p.newdep).then(function() { p.newdep = ""; });
+        projects.addDep(p, p.newdep).then(function() { p.newdep = ""; });
     };
 
     $scope.addHook = function(p) {
