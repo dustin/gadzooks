@@ -1,9 +1,0 @@
-[submodule "github.com/mjibson/appstats"]
-	path = github.com/mjibson/appstats
-	url = git://github.com/mjibson/appstats.git
-[submodule "github.com/dustin/go-jsonpointer"]
-	path = github.com/dustin/go-jsonpointer
-	url = git://github.com/dustin/go-jsonpointer
-[submodule "github.com/dustin/gojson"]
-	path = github.com/dustin/gojson
-	url = git://github.com/dustin/gojson
