@@ -16,6 +16,7 @@ import (
 	"appengine/taskqueue"
 	"appengine/urlfetch"
 
+	"github.com/dustin/httputil"
 	"github.com/mjibson/appstats"
 )
 
@@ -91,7 +92,7 @@ func processFile(c appengine.Context, repos map[string]int, fn string) error {
 		return err
 	}
 	if res.StatusCode != 200 {
-		return fmt.Errorf("Error grabbing %v: %v", fn, res)
+		return httputil.HTTPErrorf(res, "Error grabbing %v: %S\n%B", fn)
 	}
 
 	defer res.Body.Close()
