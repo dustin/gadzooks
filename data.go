@@ -6,6 +6,8 @@ import (
 	"appengine/datastore"
 )
 
+// Project contains all the data the user specifies for his/her
+// project.
 type Project struct {
 	Owner    string         `json:"owner"`
 	Name     string         `json:"name"`
@@ -18,6 +20,7 @@ type Project struct {
 	Key *datastore.Key `datastore:"-"`
 }
 
+// A Group is a list of users who wish to share ownership of a project.
 type Group struct {
 	Name    string   `json:"name"`
 	Members []string `json:"members"`
@@ -25,6 +28,8 @@ type Group struct {
 	Key *datastore.Key `datastore:"-"`
 }
 
+// A Hook defines a webhook that will be triggered when a repostory
+// event occurs.
 type Hook struct {
 	Project  *datastore.Key
 	Repo     string    `json:"repo"`

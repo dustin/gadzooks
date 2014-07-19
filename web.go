@@ -27,9 +27,8 @@ func init() {
 	appstats.ShouldRecord = func(r *http.Request) bool {
 		if strings.HasPrefix(r.URL.Path, "/cron") {
 			return true
-		} else {
-			return appstats.DefaultShouldRecord(r)
 		}
+		return appstats.DefaultShouldRecord(r)
 	}
 
 	http.HandleFunc("/", serveHome)
