@@ -174,11 +174,13 @@ func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		wg2 := &sync.WaitGroup{}
 		for _, k := range keys {
-			wg.Add(1)
+			wg2.Add(1)
 			go generateKeys(c, datastore.NewQuery("Project").Filter("Group =", k),
-				ch, ech, qch, wg)
+				ch, ech, qch, wg2)
 		}
+		wg2.Wait()
 	}()
 
 	keysM, err := waitForKeys(ch, ech, qch, wg)
