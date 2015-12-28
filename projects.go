@@ -7,11 +7,13 @@ import (
 	"sync"
 	"time"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/delay"
-	"appengine/memcache"
-	"appengine/user"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/delay"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/user"
 
 	"github.com/mjibson/appstats"
 )
@@ -23,9 +25,9 @@ func init() {
 	http.Handle("/api/projects", appstats.NewHandler(lsProjects))
 }
 
-func syncHooks(c appengine.Context, pkey *datastore.Key) error {
+func syncHooks(c context.Context, pkey *datastore.Key) error {
 	cacheKeys := []string{interestKey}
-	err := datastore.RunInTransaction(c, func(tc appengine.Context) error {
+	err := datastore.RunInTransaction(c, func(tc context.Context) error {
 		project := &Project{}
 		err := datastore.Get(tc, pkey, project)
 		if err != nil {
@@ -47,7 +49,7 @@ func syncHooks(c appengine.Context, pkey *datastore.Key) error {
 		for _, dep := range project.Deps {
 			cacheKeys = append(cacheKeys, repoKey(dep))
 			for _, hook := range project.Hooks {
-				tc.Infof("Hooking %v -> %v", dep, hook)
+				log.Infof(c, "Hooking %v -> %v", dep, hook)
 				keys = append(keys, datastore.NewIncompleteKey(c, "Hook", pkey))
 				hooks = append(hooks, &Hook{
 					Project:  pkey,
@@ -65,7 +67,7 @@ func syncHooks(c appengine.Context, pkey *datastore.Key) error {
 	}, nil)
 
 	if err == nil {
-		c.Infof("Clearing cache for %v", cacheKeys)
+		log.Infof(c, "Clearing cache for %v", cacheKeys)
 		memcache.DeleteMulti(c, cacheKeys)
 	}
 	return err
@@ -74,7 +76,7 @@ func syncHooks(c appengine.Context, pkey *datastore.Key) error {
 
 var syncHooksAsync = delay.Func("syncHooksAsync", syncHooks)
 
-var deleteProject = delay.Func("deleteProject", func(c appengine.Context, pkey *datastore.Key) error {
+var deleteProject = delay.Func("deleteProject", func(c context.Context, pkey *datastore.Key) error {
 	project := &Project{}
 	if err := datastore.Get(c, pkey, project); err != nil {
 		return err
@@ -94,18 +96,18 @@ var deleteProject = delay.Func("deleteProject", func(c appengine.Context, pkey *
 		for _, r := range project.Deps {
 			cacheKeys = append(cacheKeys, repoKey(r))
 		}
-		c.Infof("Clearing cache for %v", cacheKeys)
+		log.Infof(c, "Clearing cache for %v", cacheKeys)
 		memcache.DeleteMulti(c, cacheKeys)
 	}
 	return err
 })
 
-func groupProjects(c appengine.Context, gkey *datastore.Key) ([]*datastore.Key, error) {
+func groupProjects(c context.Context, gkey *datastore.Key) ([]*datastore.Key, error) {
 	q := datastore.NewQuery("Project").Filter("Group = ", gkey).KeysOnly()
 	return q.GetAll(c, nil)
 }
 
-func generateKeys(c appengine.Context, q *datastore.Query,
+func generateKeys(c context.Context, q *datastore.Query,
 	ch chan *datastore.Key, ech chan error, qch chan bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -151,7 +153,7 @@ func waitForKeys(ch chan *datastore.Key, ech chan error, qch chan bool,
 	}
 }
 
-func lsProjects(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func lsProjects(c context.Context, w http.ResponseWriter, r *http.Request) {
 	ch := make(chan *datastore.Key)
 	ech := make(chan error)
 	qch := make(chan bool)
@@ -213,7 +215,7 @@ func maybeKey(s string) *datastore.Key {
 	return k
 }
 
-func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func newProject(c context.Context, w http.ResponseWriter, r *http.Request) {
 	t := time.Now().UTC()
 
 	project := &Project{
@@ -238,7 +240,7 @@ func newProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, project)
 }
 
-var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.Values) error {
+var updateInner = delay.Func("updateInner", func(c context.Context, form url.Values) error {
 	tid := form.Get("key")
 
 	k, err := datastore.DecodeKey(tid)
@@ -258,7 +260,7 @@ var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.V
 	project.Hooks = form["hooks"]
 	project.Group = maybeKey(form.Get("group"))
 
-	c.Infof("Delayed update of %v for %v", project.Name, project.Owner)
+	log.Infof(c, "Delayed update of %v for %v", project.Name, project.Owner)
 
 	_, err = datastore.Put(c, k, project)
 	if err != nil {
@@ -268,13 +270,13 @@ var updateInner = delay.Func("updateInner", func(c appengine.Context, form url.V
 	return syncHooks(c, k)
 })
 
-func updateProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func updateProject(c context.Context, w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	updateInner.Call(c, r.Form)
 	w.WriteHeader(202)
 }
 
-func rmProject(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func rmProject(c context.Context, w http.ResponseWriter, r *http.Request) {
 	k, err := datastore.DecodeKey(r.FormValue("key"))
 	if err != nil {
 		http.Error(w, "Can't decode key", 400)

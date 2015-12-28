@@ -10,11 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/memcache"
-	"appengine/taskqueue"
-	"appengine/urlfetch"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/taskqueue"
+	"google.golang.org/appengine/urlfetch"
 
 	"github.com/dustin/httputil"
 	"github.com/mjibson/appstats"
@@ -52,7 +54,7 @@ func formatDate(t time.Time) string {
 		t.Year(), t.Month(), t.Day(), t.Hour())
 }
 
-func eventProcessor(c appengine.Context, repos map[string]int,
+func eventProcessor(c context.Context, repos map[string]int,
 	ch chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -64,7 +66,7 @@ func eventProcessor(c appengine.Context, repos map[string]int,
 		}{}
 		err := json.Unmarshal(data, &repo)
 		if err != nil {
-			c.Warningf("Error unmarshaling json from %s: %v", data, err)
+			log.Warningf(c, "Error unmarshaling json from %s: %v", data, err)
 			continue
 		}
 		if repo.Type != "PushEvent" {
@@ -77,14 +79,14 @@ func eventProcessor(c appengine.Context, repos map[string]int,
 			_, err = taskqueue.Add(c,
 				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
 			if err != nil {
-				c.Errorf("Error queueing task:  %v", err)
+				log.Errorf(c, "Error queueing task:  %v", err)
 			}
 		}
 	}
 }
 
-func processFile(c appengine.Context, repos map[string]int, fn string) error {
-	c.Infof("Downloading %v", fn)
+func processFile(c context.Context, repos map[string]int, fn string) error {
+	log.Infof(c, "Downloading %v", fn)
 	start := time.Now()
 	h := urlfetch.Client(c)
 	res, err := h.Get(archiveu + fn + ".json.gz")
@@ -127,11 +129,11 @@ func processFile(c appengine.Context, repos map[string]int, fn string) error {
 	}
 	close(ch)
 	wg.Wait()
-	c.Infof("Found %v events in %v", docs, time.Since(start))
+	log.Infof(c, "Found %v events in %v", docs, time.Since(start))
 	return nil
 }
 
-func loadInterestingRepos(c appengine.Context) (map[string]int, error) {
+func loadInterestingRepos(c context.Context) (map[string]int, error) {
 	found := map[string]int{}
 	if item, err := memcache.JSON.Get(c, interestKey, &found); err == memcache.ErrCacheMiss {
 		q := datastore.NewQuery("Hook")
@@ -156,23 +158,23 @@ func loadInterestingRepos(c appengine.Context) (map[string]int, error) {
 	return found, nil
 }
 
-func ghaDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func ghaDownload(c context.Context, w http.ResponseWriter, r *http.Request) {
 	repos, err := loadInterestingRepos(c)
 	if err != nil {
-		c.Errorf("Error loading repos: %v", err)
+		log.Errorf(c, "Error loading repos: %v", err)
 		http.Error(w, "Error loading repos:  "+err.Error(), 500)
 		return
 	}
 	err = processFile(c, repos, r.FormValue("fn"))
 	if err != nil {
-		c.Errorf("Error processing file: %v", err)
+		log.Errorf(c, "Error processing file: %v", err)
 		http.Error(w, "Error processing file: "+err.Error(), 503)
 		return
 	}
 	w.WriteHeader(204)
 }
 
-func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func cronDownload(c context.Context, w http.ResponseWriter, r *http.Request) {
 	loc, err := time.LoadLocation("US/Pacific")
 	if err != nil {
 		http.Error(w, "Can't find timezone: "+err.Error(), 500)
@@ -186,7 +188,7 @@ func cronDownload(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(202)
 }
 
-func interesting(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func interesting(c context.Context, w http.ResponseWriter, r *http.Request) {
 	i, err := loadInterestingRepos(c)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

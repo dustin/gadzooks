@@ -10,9 +10,12 @@ import (
 	"net/url"
 	"time"
 
-	"appengine"
-	"appengine/memcache"
-	"appengine/urlfetch"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/urlfetch"
 
 	"github.com/dustin/go-jsonpointer"
 	"github.com/mjibson/appstats"
@@ -25,15 +28,15 @@ func init() {
 	http.HandleFunc("/_ah/stop", stopHook)
 }
 
-func hookDeliveryError(c appengine.Context, r *http.Request, err error) {
-	c.Errorf("Error delivering message relating to repo %v to %v for %v: %v",
+func hookDeliveryError(c context.Context, r *http.Request, err error) {
+	log.Errorf(c, "Error delivering message relating to repo %v to %v for %v: %v",
 		r.Header.Get("x-repo"), r.Header.Get("x-dest"),
 		r.Header.Get("x-owner"), err)
 }
 
 var c64tab = crc64.MakeTable(crc64.ISO)
 
-func hasSeen(c appengine.Context, dest, hashstr string) bool {
+func hasSeen(c context.Context, dest, hashstr string) bool {
 	h := crc64.New(c64tab)
 	h.Write([]byte(dest))
 
@@ -46,7 +49,7 @@ func hasSeen(c appengine.Context, dest, hashstr string) bool {
 	return memcache.Add(c, itm) == memcache.ErrNotStored
 }
 
-func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func deliverHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 	var b io.Reader = r.Body
 	if r.Header.Get("content-type") == "application/x-www-form-urlencoded" {
 		bod, err := ioutil.ReadAll(io.LimitReader(r.Body, maxBody))
@@ -67,12 +70,12 @@ func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 		}
 		if err == nil {
 			if hasSeen(c, r.Header.Get("x-dest"), hashstr) {
-				c.Infof("Already processed %v -> %v",
+				log.Infof(c, "Already processed %v -> %v",
 					hashstr, r.Header.Get("x-dest"))
 				return
 			}
 		} else {
-			c.Infof("Can't find head, not trying to avoid it.")
+			log.Infof(c, "Can't find head, not trying to avoid it.")
 		}
 	}
 	req, err := http.NewRequest(
@@ -93,7 +96,7 @@ func deliverHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	}
 	defer res.Body.Close()
 
-	c.Infof("Delivered message relating to repo %v to %v for %v: %v",
+	log.Infof(c, "Delivered message relating to repo %v to %v for %v: %v",
 		r.Header.Get("x-repo"), r.Header.Get("x-dest"),
 		r.Header.Get("x-owner"), res.Status)
 
@@ -104,7 +107,7 @@ func startHook(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 
 	appstats.RecordFraction = 0.05
-	c.Infof("Set worker app stats to %.2f%%", appstats.RecordFraction*100.0)
+	log.Infof(c, "Set worker app stats to %.2f%%", appstats.RecordFraction*100.0)
 
 	w.WriteHeader(204)
 }

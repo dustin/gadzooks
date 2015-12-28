@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"net/url"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/delay"
-	"appengine/user"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/delay"
+	"google.golang.org/appengine/user"
 
 	"github.com/mjibson/appstats"
 )
@@ -19,7 +20,7 @@ func init() {
 	http.Handle("/api/groups", appstats.NewHandler(lsGroups))
 }
 
-func userGroups(c appengine.Context, email string) ([]Group, error) {
+func userGroups(c context.Context, email string) ([]Group, error) {
 	results := []Group{}
 
 	q := datastore.NewQuery("Group").Filter("Members = ", email)
@@ -34,7 +35,7 @@ func userGroups(c appengine.Context, email string) ([]Group, error) {
 	return results, nil
 }
 
-func lsGroups(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func lsGroups(c context.Context, w http.ResponseWriter, r *http.Request) {
 	results, err := userGroups(c, user.Current(c).Email)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
@@ -43,7 +44,7 @@ func lsGroups(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, results)
 }
 
-func newGroup(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func newGroup(c context.Context, w http.ResponseWriter, r *http.Request) {
 	group := &Group{Name: r.FormValue("name"), Members: []string{user.Current(c).Email}}
 	k, err := datastore.Put(c, datastore.NewIncompleteKey(c, "Group", nil),
 		group)
@@ -57,7 +58,7 @@ func newGroup(c appengine.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, group)
 }
 
-var updateGroupInner = delay.Func("updateGroupInner", func(c appengine.Context, form url.Values) error {
+var updateGroupInner = delay.Func("updateGroupInner", func(c context.Context, form url.Values) error {
 	k, err := datastore.DecodeKey(form.Get("key"))
 	if err != nil {
 		return err
@@ -76,13 +77,13 @@ var updateGroupInner = delay.Func("updateGroupInner", func(c appengine.Context, 
 	return err
 })
 
-func updateGroup(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func updateGroup(c context.Context, w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	updateGroupInner.Call(c, r.Form)
 	w.WriteHeader(202)
 }
 
-var rmGroupInner = delay.Func("rmGroupInner", func(c appengine.Context, form url.Values) error {
+var rmGroupInner = delay.Func("rmGroupInner", func(c context.Context, form url.Values) error {
 	k, err := datastore.DecodeKey(form.Get("key"))
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ var rmGroupInner = delay.Func("rmGroupInner", func(c appengine.Context, form url
 	return datastore.Delete(c, k)
 })
 
-func rmGroup(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func rmGroup(c context.Context, w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	rmGroupInner.Call(c, r.Form)
 	w.WriteHeader(202)

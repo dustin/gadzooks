@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"strings"
 
-	"appengine"
-	"appengine/user"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/user"
 
 	"github.com/mjibson/appstats"
 )
@@ -61,7 +64,7 @@ func logoutRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-func currentUser(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func currentUser(c context.Context, w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, user.Current(c))
 }
 
@@ -71,5 +74,5 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 
 func warmupHook(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	c.Infof("Warming up %v", r.Header.Get("Host"))
+	log.Infof(c, "Warming up %v", r.Header.Get("Host"))
 }

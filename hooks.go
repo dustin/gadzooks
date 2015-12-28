@@ -1,6 +1,7 @@
 package gadzooks
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -9,12 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"appengine"
-	"appengine/datastore"
-	"appengine/memcache"
-	"appengine/taskqueue"
+	"golang.org/x/net/context"
 
-	"fmt"
+	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/taskqueue"
+
 	"github.com/mjibson/appstats"
 )
 
@@ -39,13 +41,13 @@ func repoKey(repo string) string {
 	return "repo-" + repo
 }
 
-func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
+func findHooks(c context.Context, repo string) ([]*Hook, error) {
 	rv := []*Hook{}
 
 	cacheKey := repoKey(repo)
 
 	if item, err := memcache.JSON.Get(c, cacheKey, &rv); err == memcache.ErrCacheMiss {
-		c.Infof("Reconstructing cache for %v", repo)
+		log.Infof(c, "Reconstructing cache for %v", repo)
 		q := datastore.NewQuery("Hook").Filter("Repo = ", repo)
 		keys, err := q.GetAll(c, &rv)
 		if err != nil {
@@ -66,7 +68,7 @@ func findHooks(c appengine.Context, repo string) ([]*Hook, error) {
 	} else if err != nil {
 		return nil, err
 	} else {
-		c.Debugf("Found item in cache: %v", repo)
+		log.Debugf(c, "Found item in cache: %v", repo)
 	}
 
 	return rv, nil
@@ -90,11 +92,11 @@ func authenticateRepo(repo string, r *http.Request) error {
 	return nil
 }
 
-func queueHook(c appengine.Context, w http.ResponseWriter, r *http.Request) {
+func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 	repo := r.URL.Path[len("/deliver/"):]
 
 	if err := authenticateRepo(repo, r); err != nil {
-		c.Warningf("Unauthorized trigger for %v: %v", repo, err)
+		log.Warningf(c, "Unauthorized trigger for %v: %v", repo, err)
 		http.Error(w, err.Error(), 403)
 		return
 	}

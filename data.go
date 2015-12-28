@@ -3,7 +3,7 @@ package gadzooks
 import (
 	"time"
 
-	"appengine/datastore"
+	"google.golang.org/appengine/datastore"
 )
 
 // Project contains all the data the user specifies for his/her
