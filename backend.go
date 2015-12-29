@@ -28,10 +28,12 @@ func init() {
 	http.HandleFunc("/_ah/stop", stopHook)
 }
 
-func hookDeliveryError(c context.Context, r *http.Request, err error) {
+func hookDeliveryError(c context.Context, w http.ResponseWriter, r *http.Request,
+	code int, err error) {
 	log.Errorf(c, "Error delivering message relating to repo %v to %v for %v: %v",
 		r.Header.Get("x-repo"), r.Header.Get("x-dest"),
 		r.Header.Get("x-owner"), err)
+	w.WriteHeader(code)
 }
 
 var c64tab = crc64.MakeTable(crc64.ISO)
@@ -54,11 +56,13 @@ func deliverHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("content-type") == "application/x-www-form-urlencoded" {
 		bod, err := ioutil.ReadAll(io.LimitReader(r.Body, maxBody))
 		if err != nil {
-			panic(err)
+			hookDeliveryError(c, w, r, 400, err)
+			return
 		}
 		form, err := url.ParseQuery(string(bod))
 		if err != nil {
-			panic(err)
+			hookDeliveryError(c, w, r, 400, err)
+			return
 		}
 		b = bytes.NewReader(bod)
 
@@ -78,12 +82,10 @@ func deliverHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 			log.Infof(c, "Can't find head, not trying to avoid it.")
 		}
 	}
-	req, err := http.NewRequest(
-		r.Header.Get("x-method"),
-		r.Header.Get("x-dest"),
-		ioutil.NopCloser(b))
+	req, err := http.NewRequest(r.Header.Get("x-method"),
+		r.Header.Get("x-dest"), ioutil.NopCloser(b))
 	if err != nil {
-		hookDeliveryError(c, r, err)
+		hookDeliveryError(c, w, r, 400, err)
 		return
 	}
 	req.Header.Set("content-type", r.Header.Get("content-type"))
@@ -91,7 +93,7 @@ func deliverHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 	client := urlfetch.Client(c)
 	res, err := client.Do(req)
 	if err != nil {
-		hookDeliveryError(c, r, err)
+		hookDeliveryError(c, w, r, 500, err)
 		return
 	}
 	defer res.Body.Close()
