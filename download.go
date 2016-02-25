@@ -54,8 +54,7 @@ func formatDate(t time.Time) string {
 		t.Year(), t.Month(), t.Day(), t.Hour())
 }
 
-func eventProcessor(c context.Context, repos map[string]int,
-	ch chan []byte, wg *sync.WaitGroup) {
+func eventProcessor(c context.Context, repos map[string]int, ch <-chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for data := range ch {
@@ -76,8 +75,7 @@ func eventProcessor(c context.Context, repos map[string]int,
 		rname := repo.Repository.Owner + "/" + repo.Repository.Name
 		if repos[rname] > 0 {
 			form := url.Values{"payload": []string{string(data)}}
-			_, err = taskqueue.Add(c,
-				taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
+			_, err = taskqueue.Add(c, taskqueue.NewPOSTTask("/deliver/"+rname, form), "")
 			if err != nil {
 				log.Errorf(c, "Error queueing task:  %v", err)
 			}
