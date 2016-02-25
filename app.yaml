@@ -1,4 +1,4 @@
-application: gadzooks
+application: coastal-volt-254
 version: 1
 runtime: go
 api_version: go1
