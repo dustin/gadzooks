@@ -7,9 +7,9 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
+	"go4.org/syncutil"
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/datastore"
@@ -111,11 +111,10 @@ func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	wg := sync.WaitGroup{}
+	g := syncutil.Group{}
 	for _, hook := range hooks {
-		wg.Add(1)
-		go func(hook *Hook) {
-			defer wg.Done()
+		hook := hook
+		g.Go(func() error {
 			task := &taskqueue.Task{
 				Path:    "/backend/deliver",
 				Payload: data,
@@ -130,12 +129,14 @@ func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 			}
 
 			_, err = taskqueue.Add(c, task, "deliver")
-			if err != nil {
-				panic(err)
-			}
-		}(hook)
+			return err
+		})
 	}
-	wg.Wait()
+	if err := g.Err(); err != nil {
+		log.Errorf(c, "Error queuing hooks: %v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
 
 	w.WriteHeader(201)
 }
