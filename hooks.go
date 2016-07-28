@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"go4.org/syncutil"
 	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
 
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/log"
@@ -111,7 +111,7 @@ func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	g := syncutil.Group{}
+	g, _ := errgroup.WithContext(c)
 	for _, hook := range hooks {
 		hook := hook
 		g.Go(func() error {
@@ -132,7 +132,7 @@ func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 			return err
 		})
 	}
-	if err := g.Err(); err != nil {
+	if err := g.Wait(); err != nil {
 		log.Errorf(c, "Error queuing hooks: %v", err)
 		http.Error(w, err.Error(), 500)
 		return
