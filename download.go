@@ -84,7 +84,10 @@ func eventProcessor(c context.Context, repos map[string]int, ch <-chan []byte, w
 }
 
 func processFile(c context.Context, repos map[string]int, fn string) error {
-	log.Infof(c, "Downloading %v", fn)
+	dl, dlset := c.Deadline()
+	log.Infof(c, "Downloading %v with inherited deadline of %v (%v)", fn, dl, dlset)
+	c, cancel := context.WithTimeout(c, time.Minute)
+	defer cancel()
 	start := time.Now()
 	h := urlfetch.Client(c)
 	res, err := h.Get(archiveu + fn + ".json.gz")
@@ -118,6 +121,7 @@ func processFile(c context.Context, repos map[string]int, fn string) error {
 		}
 		if err != nil {
 			close(ch)
+			log.Errorf(c, "Error after %v docs in %v -- ctx err: %v -- json err: %v", docs, time.Since(start), c.Err(), err)
 			return err
 		}
 
