@@ -3,6 +3,7 @@ package gadzooks
 import (
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -23,6 +24,8 @@ func init() {
 	http.Handle("/api/projects/update", appstats.NewHandler(updateProject))
 	http.Handle("/api/projects/rm", appstats.NewHandler(rmProject))
 	http.Handle("/api/projects", appstats.NewHandler(lsProjects))
+
+	http.Handle("/export/handlers", appstats.NewHandler(exportHandlers))
 }
 
 func syncHooks(c context.Context, pkey *datastore.Key) error {
@@ -151,6 +154,22 @@ func waitForKeys(ch chan *datastore.Key, ech chan error, qch chan bool,
 			return rv, err
 		}
 	}
+}
+
+func exportHandlers(c context.Context, w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("AUTH_SECRET") != r.FormValue("auth") {
+		log.Errorf(c, "%q != %q", os.Getenv("AUTH_SECRET"), r.FormValue("auth"))
+		http.Error(w, "unauthorized", 403)
+		return
+	}
+
+	repos, err := loadInterestingRepos(c)
+	if err != nil {
+		log.Errorf(c, "error loading interesting repos: %v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	mustEncode(w, repos)
 }
 
 func lsProjects(c context.Context, w http.ResponseWriter, r *http.Request) {

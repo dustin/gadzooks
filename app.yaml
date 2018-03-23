@@ -50,6 +50,10 @@ handlers:
   script: _go_app
   login: optional
 
+- url: /export/.*
+  script: _go_app
+  login: optional
+
 - url: .*
   script: _go_app
   login: required
