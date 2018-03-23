@@ -163,7 +163,7 @@ func exportHandlers(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repos, err := loadInterestingRepos(c)
+	repos, err := loadInterestingReposURLs(c)
 	if err != nil {
 		log.Errorf(c, "error loading interesting repos: %v", err)
 		http.Error(w, err.Error(), 500)

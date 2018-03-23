@@ -24,7 +24,7 @@ import (
 
 const (
 	archiveu    = "http://data.githubarchive.org/"
-	interestKey = "interesting"
+	interestKey = "interestingU"
 )
 
 func init() {
@@ -135,8 +135,8 @@ func processFile(c context.Context, repos map[string]int, fn string) error {
 	return nil
 }
 
-func loadInterestingRepos(c context.Context) (map[string]int, error) {
-	found := map[string]int{}
+func loadInterestingReposURLs(c context.Context) (map[string][]string, error) {
+	found := map[string][]string{}
 	if item, err := memcache.JSON.Get(c, interestKey, &found); err == memcache.ErrCacheMiss {
 		q := datastore.NewQuery("Hook")
 		for t := q.Run(c); ; {
@@ -148,7 +148,7 @@ func loadInterestingRepos(c context.Context) (map[string]int, error) {
 				return nil, err
 			}
 
-			found[x.Repo]++
+			found[x.Repo] = append(found[x.Repo], x.Dest)
 		}
 		item = &memcache.Item{
 			Key:        interestKey,
@@ -156,6 +156,18 @@ func loadInterestingRepos(c context.Context) (map[string]int, error) {
 			Expiration: expirationTime,
 		}
 		return found, memcache.JSON.Set(c, item)
+	}
+	return found, nil
+}
+
+func loadInterestingRepos(c context.Context) (map[string]int, error) {
+	fu, err := loadInterestingReposURLs(c)
+	if err != nil {
+		return nil, err
+	}
+	found := map[string]int{}
+	for k, v := range fu {
+		found[k] = len(v)
 	}
 	return found, nil
 }
