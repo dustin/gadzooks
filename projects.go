@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -163,12 +164,17 @@ func exportHandlers(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repos, err := loadInterestingReposURLs(c)
+	repoU, err := loadInterestingReposURLs(c)
 	if err != nil {
 		log.Errorf(c, "error loading interesting repos: %v", err)
 		http.Error(w, err.Error(), 500)
 		return
 	}
+	var repos []string
+	for k := range repoU {
+		repos = append(repos, k)
+	}
+	sort.Strings(repos)
 	mustEncode(w, repos)
 }
 
