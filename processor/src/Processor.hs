@@ -1,6 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Processor where
+module Processor (
+  HourStamp(..),
+  Repo(..),
+  EventType(..),
+  archiveURL,
+  parseEvent,
+  processStream,
+  interestingFilter,
+  loadURLs
+  ) where
 
 import Control.Lens
 import Control.Monad (guard)
