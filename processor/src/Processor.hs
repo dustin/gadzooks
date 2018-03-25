@@ -36,20 +36,43 @@ instance Enum HourStamp where
 data Repo = Repo EventType Text Object
   deriving (Show)
 
-data EventType = PushEvent
-               | WatchEvent
-               | IssueCommentEvent
-               | PullRequestEvent
+data EventType = CommitCommentEvent
                | CreateEvent
-               | IssuesEvent
-               | PullRequestReviewCommentEvent
-               | ForkEvent
-               | ReleaseEvent
-               | MemberEvent
                | DeleteEvent
+               | DeploymentEvent
+               | DeploymentStatusEvent
+               | DownloadEvent
+               | FollowEvent
+               | ForkEvent
+               | ForkApplyEvent
+               | GistEvent
                | GollumEvent
-               | CommitCommentEvent
+               | InstallationEvent
+               | InstallationRepositoriesEvent
+               | IssueCommentEvent
+               | IssuesEvent
+               | LabelEvent
+               | MarketplacePurchaseEvent
+               | MemberEvent
+               | MembershipEvent
+               | MilestoneEvent
+               | OrganizationEvent
+               | OrgBlockEvent
+               | PageBuildEvent
+               | ProjectCardEvent
+               | ProjectColumnEvent
+               | ProjectEvent
                | PublicEvent
+               | PullRequestEvent
+               | PullRequestReviewEvent
+               | PullRequestReviewCommentEvent
+               | PushEvent
+               | ReleaseEvent
+               | RepositoryEvent
+               | StatusEvent
+               | TeamEvent
+               | TeamAddEvent
+               | WatchEvent
                | UnknownEvent
                deriving (Eq, Read, Show)
 
