@@ -31,7 +31,7 @@ parseOne = do
 parseSample :: (Repo -> Bool) -> Int -> Assertion
 parseSample f l = do
   d <- BL.readFile "test/small.gz"
-  case processStream' f d of
+  case processStream f d of
     (Left x) -> assertFailure (show x)
     (Right x) -> length x @?= l
 

@@ -19,16 +19,12 @@ interestingRepos = Set.fromList [
   "fxtools/quote_percentages"
   ]
 
-benchOld :: B.ByteString -> (Repo -> Bool) -> Benchmark
-benchOld !d !f = bench "old parser" $ whnf (processStream f) (BL.fromStrict d)
-
-benchNew :: B.ByteString -> (Repo -> Bool) -> Benchmark
-benchNew !d !f = bench "new parser" $ whnf (processStream' f) (BL.fromStrict d)
+benchParsing :: B.ByteString -> (Repo -> Bool) -> Benchmark
+benchParsing !d !f = bench "old parser" $ whnf (processStream f) (BL.fromStrict d)
 
 
 main :: IO ()
 main = do
   d <- B.readFile "test/small.gz"
   let f = interestingFilter $! interestingRepos
-  defaultMain [benchOld d f,
-               benchNew d f]
+  defaultMain [benchParsing d f]

@@ -74,22 +74,6 @@ gzd = BL.toStrict . GZip.decompress
 processStream :: (Repo -> Bool) -> BL.ByteString -> Either String [Repo]
 processStream f b = filter f <$> A.parseOnly (A.many1 parseThing) (gzd b)
 
-processStream' :: (Repo -> Bool) -> BL.ByteString -> Either String [Repo]
-processStream' f b = let d = gzd b in
-                       process [] d
-  where
-    process :: [Repo] -> BC.ByteString -> Either String [Repo]
-    process rv "" = Right rv
-    process rv d = res $ A.parse parseThing d
-      where
-        res (A.Done d' r) = process (c rv r) d'
-        res (A.Partial f) = Right rv
-        res x = Left $ "parse failed or something: " <> show x
-
-        c rv r = case f r of
-                   True -> r : rv
-                   _ -> rv
-
 interestingFilter :: Set.Set Text -> Repo -> Bool
 interestingFilter f (Repo _ r _) = r `elem` f
 
