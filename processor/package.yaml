@@ -1,0 +1,86 @@
+name:                processor
+version:             0.1.0.0
+github:              "dustin/processor"
+license:             BSD3
+author:              "Dustin Sallings"
+maintainer:          "dustin@spy.net"
+copyright:           "MIT"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/dustin/gadzooks/processor#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+  - time
+  - zlib
+  - bytestring
+  - aeson
+  - lens
+  - lens-aeson
+  - unordered-containers
+  - containers
+  - text
+  - attoparsec
+  - wreq
+
+executables:
+  processor-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - processor
+
+tests:
+  processor-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - processor
+    - QuickCheck
+    - HUnit
+    - tasty
+    - tasty-hunit
+    - tasty-quickcheck
+    - bytestring
+    - text
+    - time
+    - attoparsec
+    - containers
+
+benchmarks:
+  processor-bench:
+    main: Bench.hs
+    source-dirs: test/bench
+    ghc-options:
+    - -O2
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - processor
+    - criterion
+    - bytestring
+    - containers
+    - text
