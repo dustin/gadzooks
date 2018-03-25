@@ -95,13 +95,13 @@ gzd :: BL.ByteString -> B.ByteString
 gzd = BL.toStrict . GZip.decompress
 
 processStream :: (Repo -> Bool) -> BL.ByteString -> Either String [Repo]
-processStream f b = filter f <$> A.parseOnly (A.many1 parseThing) (gzd b)
+processStream f b = filter f <$> A.parseOnly (A.many1 parseEvent) (gzd b)
 
 interestingFilter :: Set.Set Text -> Repo -> Bool
 interestingFilter f (Repo _ r _) = r `elem` f
 
-parseThing :: A.Parser Repo
-parseThing = do
+parseEvent :: A.Parser Repo
+parseEvent = do
   j <- json
   let typ = fromMaybe UnknownEvent (readMaybe =<< unpack <$> j ^? key "type" ._String)
   let r = Repo typ
