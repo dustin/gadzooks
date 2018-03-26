@@ -4,14 +4,14 @@ module Main where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, unpack)
 import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
 
 import Processor
 
 data Options = Options {
-  optSecret :: String
+  optSecret :: Text
   }
 
 loginfo :: String -> IO ()
@@ -22,8 +22,7 @@ options = Options
   <$> strOption (long "auth" <> help "auth secret")
 
 notify :: Options -> IO ()
-notify (Options secS) = do
-  let sec = pack secS
+notify (Options sec) = do
   reposE <- loadInteresting sec
   let repos = either (fail <*> show) id reposE
   url <- archiveURL . pred <$> currentStamp
