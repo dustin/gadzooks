@@ -17,14 +17,12 @@ module Processor (
   ) where
 
 import Control.Lens
-import Data.Monoid (All(..), getAll)
-import Control.Exception as E
 import Data.Aeson (Object, json, eitherDecode, encode)
 import Data.Aeson.Lens
 import Data.Maybe (maybe, fromMaybe)
+import Data.Monoid (All(..), getAll)
 import Data.Semigroup ((<>))
 import Data.Text (Text, unpack)
-import qualified Data.Text.Lazy as L
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
 import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
@@ -36,6 +34,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Set as Set
+import qualified Data.Text.Lazy as L
 
 data HourStamp = HourStamp Day Int
   deriving (Eq)
@@ -99,18 +98,16 @@ currentStamp = tostamp <$> getCurrentTime
   where tostamp t = HourStamp (utctDay t) (((`div` 3600) . tosecs . utctDayTime) t)
         tosecs = fromIntegral . (`div` 1000000000000) . diffTimeToPicoseconds
 
-processURL :: (Repo -> Bool) -> String -> IO (Either String [Repo])
-processURL f u = do
-  er <- E.try (get u)
-  case er of
-    (Left s) -> pure $ Left (show (s :: E.SomeException))
-    (Right r) -> pure $ processStream f (r ^. responseBody)
+processURL :: String -> IO (Either String [Repo])
+processURL u = do
+  r <- get u
+  pure $ processStream (r ^. responseBody)
 
 gzd :: BL.ByteString -> B.ByteString
 gzd = BL.toStrict . GZip.decompress
 
-processStream :: (Repo -> Bool) -> BL.ByteString -> Either String [Repo]
-processStream f b = filter f <$> A.parseOnly (A.many1 parseEvent) (gzd b)
+processStream :: BL.ByteString -> Either String [Repo]
+processStream b = A.parseOnly (A.many1 parseEvent) (gzd b)
 
 interestingFilter :: Set.Set Text -> Repo -> Bool
 interestingFilter f (Repo _ r _) = r `elem` f
@@ -133,10 +130,8 @@ parseEvent = do
 loadInteresting :: Text -> IO (Either String (Set.Set Text))
 loadInteresting auth = do
   let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
-  er <- E.try (getWith opts "https://coastal-volt-254.appspot.com/export/handlers")
-  case er of
-    (Left s) -> pure $ Left (show (s :: E.SomeException))
-    (Right r) -> pure $ eitherDecode (r ^. responseBody)
+  r <- getWith opts "https://coastal-volt-254.appspot.com/export/handlers"
+  pure $ eitherDecode (r ^. responseBody)
 
 queueHook :: Text -> Repo -> IO ()
 queueHook auth (Repo _ r p) = do

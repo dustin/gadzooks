@@ -26,8 +26,8 @@ notify (Options sec) = do
   reposE <- loadInteresting sec
   let repos = either (fail <*> show) id reposE
   url <- archiveURL . pred <$> currentStamp
-  todoE <- processURL (combineFilters [interestingFilter repos, typeIs PushEvent]) url
-  let todo = either (fail <*> show) id todoE
+  todoE <- processURL url
+  let todo = either (fail <*> show) (filter (combineFilters [interestingFilter repos, typeIs PushEvent])) todoE
   loginfo $ "Todo:  " <> (show.length) todo
   mapM_ (\r@(Repo _ rn _) -> do
             loginfo $ unpack $ "Notifying " <> rn

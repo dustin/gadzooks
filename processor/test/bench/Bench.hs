@@ -19,8 +19,11 @@ interestingRepos = Set.fromList [
   "fxtools/quote_percentages"
   ]
 
+ps :: (Repo -> Bool) -> BL.ByteString -> Either String [Repo]
+ps f d = filter f <$> processStream d
+
 benchParsing :: B.ByteString -> (Repo -> Bool) -> Benchmark
-benchParsing !d !f = bench "old parser" $ whnf (processStream f) (BL.fromStrict d)
+benchParsing !d !f = bench "filter + parser" $ whnf (ps f) (BL.fromStrict d)
 
 
 main :: IO ()
