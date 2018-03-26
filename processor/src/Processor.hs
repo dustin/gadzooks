@@ -17,21 +17,18 @@ module Processor (
   ) where
 
 import Control.Lens
-import Control.Monad (guard)
 import Data.Monoid (All(..), getAll)
 import Control.Exception as E
-import Data.Aeson (Object, Value(..), json, eitherDecode, encode)
+import Data.Aeson (Object, json, eitherDecode, encode)
 import Data.Aeson.Lens
-import Data.Either (rights)
-import Data.Maybe (maybe, isJust, fromMaybe)
+import Data.Maybe (maybe, fromMaybe)
 import Data.Semigroup ((<>))
 import Data.Text (Text, unpack)
 import qualified Data.Text.Lazy as L
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
-import Data.Time.Clock (DiffTime, diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
-import Network.Wreq (Response, get, getWith, postWith, defaults, param, header,
-                     responseStatus, statusCode, responseBody, FormParam((:=)))
+import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
+import Network.Wreq (get, getWith, postWith, defaults, header, responseBody, FormParam((:=)))
 import Text.Read (readMaybe)
 import qualified Codec.Compression.GZip as GZip
 import qualified Data.Attoparsec.ByteString as A
@@ -122,7 +119,7 @@ typeIs :: EventType -> Repo -> Bool
 typeIs e (Repo t _ _) = e == t
 
 combineFilters :: [Repo -> Bool] -> Repo -> Bool
-combineFilters l v = (getAll . mconcat . map All . map ($ v)) l
+combineFilters l v = (getAll . mconcat . map (All . ($ v))) l
 
 parseEvent :: A.Parser Repo
 parseEvent = do
@@ -131,7 +128,7 @@ parseEvent = do
   let r = Repo typ
           <$> j ^? key "repo" . key "name" . _String
           <*> j ^? key "payload" ._Object
-  maybe (fail "not found") (\x -> pure x) r
+  maybe (fail "not found") pure r
 
 loadInteresting :: Text -> IO (Either String (Set.Set Text))
 loadInteresting auth = do
@@ -142,9 +139,9 @@ loadInteresting auth = do
     (Right r) -> pure $ eitherDecode (r ^. responseBody)
 
 queueHook :: Text -> Repo -> IO ()
-queueHook auth (Repo et r p) = do
+queueHook auth (Repo _ r p) = do
   let payload = encode p
   let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
   let url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
-  postWith opts url ["payload" := (L.toStrict . decodeUtf8) payload]
+  _ <- postWith opts url ["payload" := (L.toStrict . decodeUtf8) payload]
   pure ()

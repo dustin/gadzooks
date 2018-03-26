@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
@@ -7,7 +8,6 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC
 
 import qualified Data.Attoparsec.ByteString as A
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Set as Set
 import Data.Text (Text)

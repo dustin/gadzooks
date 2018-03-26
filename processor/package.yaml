@@ -24,6 +24,9 @@ dependencies:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -Wall
+  - -O2
   dependencies:
   - time
   - zlib
@@ -42,6 +45,8 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -Wall
+    - -O2
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -56,6 +61,7 @@ tests:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
+    - -Wall
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -77,6 +83,7 @@ benchmarks:
     main: Bench.hs
     source-dirs: test/bench
     ghc-options:
+    - -Wall
     - -O2
     - -threaded
     - -rtsopts
