@@ -42,9 +42,13 @@ interestingRepos = Set.fromList [
   "fxtools/quote_percentages"
   ]
 
+allTrueIsTrue :: [Bool] -> Bool
+allTrueIsTrue l = (combineFilters ((map const) l)) (Repo undefined undefined undefined) == all id l
+
 tests :: [TestTree]
 tests = [
   testProperty "hour stamp enum +- identity" (enumPlusMinusProp :: HourStamp -> Bool),
+  testProperty "combine filters is true for all" allTrueIsTrue,
 
   testCase "parse one literal" parseOne,
   testCase "parse small sample" $ parseSample (const True) 10000,
@@ -54,4 +58,3 @@ tests = [
 
 main :: IO ()
 main = defaultMain $ testGroup "All Tests" tests
-
