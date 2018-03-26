@@ -88,7 +88,7 @@ data EventType = CommitCommentEvent
                | TeamAddEvent
                | WatchEvent
                | UnknownEvent
-               deriving (Eq, Read, Show)
+               deriving (Eq, Read, Show, Bounded, Enum)
 
 archiveURL :: HourStamp -> String
 archiveURL h = "http://data.githubarchive.org/" <> show h <> ".json.gz"

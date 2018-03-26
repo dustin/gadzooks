@@ -10,13 +10,19 @@ import Test.Tasty.QuickCheck as QC
 import qualified Data.Attoparsec.ByteString as A
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Set as Set
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Time (Day(..))
 
 import Processor
 
 instance Arbitrary HourStamp where
   arbitrary = HourStamp <$> (ModifiedJulianDay <$> arbitrary) <*> choose (0, 23)
+
+instance Arbitrary EventType where
+  arbitrary = arbitraryBoundedEnum
+
+instance Arbitrary Repo where
+  arbitrary = Repo <$> arbitrary <*> (pack <$> arbitrary) <*> pure undefined
 
 enumPlusMinusProp :: (Enum a, Eq a) => a -> Bool
 enumPlusMinusProp e = e == (succ.pred) e && e == (pred.succ) e
@@ -43,12 +49,20 @@ interestingRepos = Set.fromList [
   ]
 
 allTrueIsTrue :: [Bool] -> Bool
-allTrueIsTrue l = (combineFilters ((map const) l)) (Repo undefined undefined undefined) == all id l
+allTrueIsTrue l = combineFilters (map const l) (Repo undefined undefined undefined) == and l
+
+typeIsProp :: EventType -> Bool
+typeIsProp et = typeIs et (Repo et undefined undefined)
+
+typeIsProp2 :: EventType -> Repo -> Bool
+typeIsProp2 et r@(Repo et' _ _) = typeIs et r == (et == et')
 
 tests :: [TestTree]
 tests = [
   testProperty "hour stamp enum +- identity" (enumPlusMinusProp :: HourStamp -> Bool),
   testProperty "combine filters is true for all" allTrueIsTrue,
+  testProperty "typeIs works" typeIsProp,
+  testProperty "typeIs works 2" typeIsProp2,
 
   testCase "parse one literal" parseOne,
   testCase "parse small sample" $ parseSample (const True) 10000,
