@@ -29,6 +29,7 @@ var githubBlock *net.IPNet
 
 func init() {
 	http.Handle("/deliver/", appstats.NewHandler(queueHook))
+	http.Handle("/queueHook/", appstats.NewHandler(queueHookExternal))
 
 	_, inet, err := net.ParseCIDR("192.30.252.0/22")
 	if err != nil {
@@ -139,4 +140,28 @@ func queueHook(c context.Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(201)
+}
+
+func queueHookExternal(c context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := checkAuth(r); err != nil {
+		log.Errorf(c, "%v", err)
+		http.Error(w, "unauthorized", 403)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.Errorf(c, "error parsing form: %v", err)
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	rname := r.URL.Path[len("/queueHook/"):]
+	log.Debugf(c, "queueing hook for %q", rname)
+	if _, err := taskqueue.Add(c, taskqueue.NewPOSTTask("/deliver/"+rname, r.Form), ""); err != nil {
+		log.Errorf(c, "Error queueing task:  %v", err)
+		http.Error(w, "can't queue task", 500)
+		return
+	}
+
+	w.WriteHeader(204)
 }

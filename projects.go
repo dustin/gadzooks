@@ -1,6 +1,7 @@
 package gadzooks
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -157,9 +158,16 @@ func waitForKeys(ch chan *datastore.Key, ech chan error, qch chan bool,
 	}
 }
 
+func checkAuth(r *http.Request) error {
+	if os.Getenv("AUTH_SECRET") != r.Header.Get("x-auth-secret") {
+		return fmt.Errorf("%q != %q", os.Getenv("AUTH_SECRET"), r.Header.Get("x-auth-secret"))
+	}
+	return nil
+}
+
 func exportHandlers(c context.Context, w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("AUTH_SECRET") != r.FormValue("auth") {
-		log.Errorf(c, "%q != %q", os.Getenv("AUTH_SECRET"), r.FormValue("auth"))
+	if err := checkAuth(r); err != nil {
+		log.Errorf(c, "%v", err)
 		http.Error(w, "unauthorized", 403)
 		return
 	}
