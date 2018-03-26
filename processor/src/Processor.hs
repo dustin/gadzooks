@@ -6,23 +6,32 @@ module Processor (
   EventType(..),
   archiveURL,
   parseEvent,
+  currentStamp,
   processStream,
+  processURL,
   interestingFilter,
-  loadURLs
+  typeIs,
+  combineFilters,
+  loadInteresting,
+  queueHook
   ) where
 
 import Control.Lens
 import Control.Monad (guard)
+import Data.Monoid (All(..), getAll)
 import Control.Exception as E
-import Data.Aeson (Object, Value(..), json, eitherDecode)
+import Data.Aeson (Object, Value(..), json, eitherDecode, encode)
 import Data.Aeson.Lens
 import Data.Either (rights)
 import Data.Maybe (maybe, isJust, fromMaybe)
 import Data.Semigroup ((<>))
 import Data.Text (Text, unpack)
+import qualified Data.Text.Lazy as L
+import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
 import Data.Time.Clock (DiffTime, diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
-import Network.Wreq (Response, get, getWith, defaults, param, responseStatus, statusCode, responseBody)
+import Network.Wreq (Response, get, getWith, postWith, defaults, param, header,
+                     responseStatus, statusCode, responseBody, FormParam((:=)))
 import Text.Read (readMaybe)
 import qualified Codec.Compression.GZip as GZip
 import qualified Data.Attoparsec.ByteString as A
@@ -109,6 +118,12 @@ processStream f b = filter f <$> A.parseOnly (A.many1 parseEvent) (gzd b)
 interestingFilter :: Set.Set Text -> Repo -> Bool
 interestingFilter f (Repo _ r _) = r `elem` f
 
+typeIs :: EventType -> Repo -> Bool
+typeIs e (Repo t _ _) = e == t
+
+combineFilters :: [Repo -> Bool] -> Repo -> Bool
+combineFilters l v = (getAll . mconcat . map All . map ($ v)) l
+
 parseEvent :: A.Parser Repo
 parseEvent = do
   j <- json
@@ -118,10 +133,18 @@ parseEvent = do
           <*> j ^? key "payload" ._Object
   maybe (fail "not found") (\x -> pure x) r
 
-loadURLs :: Text -> IO (Either String (Set.Set Text))
-loadURLs auth = do
-  let opts = defaults & param "auth" .~ [auth]
+loadInteresting :: Text -> IO (Either String (Set.Set Text))
+loadInteresting auth = do
+  let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
   er <- E.try (getWith opts "https://coastal-volt-254.appspot.com/export/handlers")
   case er of
     (Left s) -> pure $ Left (show (s :: E.SomeException))
     (Right r) -> pure $ eitherDecode (r ^. responseBody)
+
+queueHook :: Text -> Repo -> IO ()
+queueHook auth (Repo et r p) = do
+  let payload = encode p
+  let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
+  let url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
+  postWith opts url ["payload" := (L.toStrict . decodeUtf8) payload]
+  pure ()

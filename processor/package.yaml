@@ -38,7 +38,7 @@ library:
   - wreq
 
 executables:
-  processor-exe:
+  processor:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -47,6 +47,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - processor
+    - optparse-applicative
+    - text
+    - hslogger
 
 tests:
   processor-test:
