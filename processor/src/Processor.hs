@@ -20,7 +20,6 @@ import Control.Lens
 import Data.Aeson (Object, json, eitherDecode, encode)
 import Data.Aeson.Lens
 import Data.Maybe (maybe, fromMaybe)
-import Data.Monoid (All(..), getAll)
 import Data.Semigroup ((<>))
 import Data.Text (Text, unpack)
 import Data.Text.Lazy.Encoding (decodeUtf8)
@@ -116,7 +115,7 @@ typeIs :: EventType -> Repo -> Bool
 typeIs e (Repo t _ _) = e == t
 
 combineFilters :: [Repo -> Bool] -> Repo -> Bool
-combineFilters l v = (getAll . mconcat . map (All . ($ v))) l
+combineFilters l v = and $ map ($ v) l
 
 parseEvent :: A.Parser Repo
 parseEvent = do
