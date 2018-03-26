@@ -115,7 +115,7 @@ typeIs :: EventType -> Repo -> Bool
 typeIs e (Repo t _ _) = e == t
 
 combineFilters :: [Repo -> Bool] -> Repo -> Bool
-combineFilters l v = and $ map ($ v) l
+combineFilters l v = all ($ v) l
 
 parseEvent :: A.Parser Repo
 parseEvent = do

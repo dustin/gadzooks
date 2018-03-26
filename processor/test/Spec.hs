@@ -12,6 +12,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Time (Day(..))
+import Data.Semigroup ((<>))
 
 import Processor
 
@@ -51,6 +52,9 @@ interestingRepos = Set.fromList [
 allTrueIsTrue :: [Bool] -> Bool
 allTrueIsTrue l = combineFilters (map const l) undefined == and l
 
+combineShortCircuitsProp :: [Bool] -> Bool
+combineShortCircuitsProp l = not $ combineFilters (map const (l <> [False, undefined])) undefined
+
 typeIsProp :: EventType -> Bool
 typeIsProp et = typeIs et (Repo et undefined undefined)
 
@@ -61,6 +65,7 @@ tests :: [TestTree]
 tests = [
   testProperty "hour stamp enum +- identity" (enumPlusMinusProp :: HourStamp -> Bool),
   testProperty "combine filters is true for all" allTrueIsTrue,
+  testProperty "combined filters short circuits" combineShortCircuitsProp,
   testProperty "typeIs works" typeIsProp,
   testProperty "typeIs works 2" typeIsProp2,
 
