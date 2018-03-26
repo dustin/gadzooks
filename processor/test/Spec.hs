@@ -49,7 +49,7 @@ interestingRepos = Set.fromList [
   ]
 
 allTrueIsTrue :: [Bool] -> Bool
-allTrueIsTrue l = combineFilters (map const l) (Repo undefined undefined undefined) == and l
+allTrueIsTrue l = combineFilters (map const l) undefined == and l
 
 typeIsProp :: EventType -> Bool
 typeIsProp et = typeIs et (Repo et undefined undefined)
