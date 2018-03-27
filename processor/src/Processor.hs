@@ -25,7 +25,7 @@ import Data.Text (Text, unpack)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
 import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
-import Network.Wreq (get, getWith, postWith, defaults, header, responseBody, FormParam((:=)))
+import Network.Wreq (get, getWith, postWith, defaults, header, responseBody, Options, FormParam((:=)))
 import Text.Read (readMaybe)
 import qualified Codec.Compression.GZip as GZip
 import qualified Data.Attoparsec.ByteString as A
@@ -126,16 +126,17 @@ parseEvent = do
           <*> j ^? key "payload" ._Object
   maybe (fail "not found") pure r
 
+authHdr :: Text -> Options
+authHdr auth = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
+
 loadInteresting :: Text -> IO (Either String (Set.Set Text))
 loadInteresting auth = do
-  let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
-  r <- getWith opts "https://coastal-volt-254.appspot.com/export/handlers"
+  r <- getWith (authHdr auth) "https://coastal-volt-254.appspot.com/export/handlers"
   pure $ eitherDecode (r ^. responseBody)
 
 queueHook :: Text -> Repo -> IO ()
 queueHook auth (Repo _ r p) = do
   let payload = encode p
-  let opts = defaults & header "x-auth-secret" .~ [(BC.pack . unpack) auth]
   let url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
-  _ <- postWith opts url ["payload" := (L.toStrict . decodeUtf8) payload]
+  _ <- postWith (authHdr auth) url ["payload" := (L.toStrict . decodeUtf8) payload]
   pure ()
