@@ -13,7 +13,9 @@ module Processor (
   typeIs,
   combineFilters,
   loadInteresting,
-  queueHook
+  queueHook,
+  pollQueue,
+  rmQueue
   ) where
 
 import Control.Lens
@@ -157,4 +159,20 @@ queueHook auth (Repo _ r p) = do
   let payload = encode p
   let url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
   _ <- postWith (authHdr auth) url ["payload" := (L.toStrict . decodeUtf8) payload]
+  pure ()
+
+data PolledTask = PolledTask HourStamp Text
+  deriving (Show)
+
+pollQueue :: Text -> IO (Maybe PolledTask)
+pollQueue auth = do
+  r <- getWith (authHdr auth) "https://coastal-volt-254.appspot.com/q/pull"
+  let bod = (read.unpack) <$> r ^? responseBody . key "body" ._String
+  let tid = r ^? responseBody . key "tid" ._String
+  pure (PolledTask <$> bod <*> tid)
+
+rmQueue :: Text -> Text -> IO ()
+rmQueue auth tid = do
+  let url = unpack ("https://coastal-volt-254.appspot.com/q/rm/x/" <> tid)
+  _ <- postWith (authHdr auth) url ["tid" := tid]
   pure ()
