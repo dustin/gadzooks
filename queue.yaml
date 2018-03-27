@@ -13,3 +13,6 @@ queue:
     task_age_limit: 3d
     min_backoff_seconds: 60
     max_backoff_seconds: 60
+
+- name: todo
+  mode: pull

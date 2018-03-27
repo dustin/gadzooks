@@ -1,6 +1,7 @@
 package gadzooks
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -30,6 +31,8 @@ var githubBlock *net.IPNet
 func init() {
 	http.Handle("/deliver/", appstats.NewHandler(queueHook))
 	http.Handle("/queueHook/", appstats.NewHandler(queueHookExternal))
+	http.Handle("/q/pull", appstats.NewHandler(hookTodo))
+	http.Handle("/q/rm/", appstats.NewHandler(handleComplete))
 
 	_, inet, err := net.ParseCIDR("192.30.252.0/22")
 	if err != nil {
@@ -160,6 +163,62 @@ func queueHookExternal(c context.Context, w http.ResponseWriter, r *http.Request
 	if _, err := taskqueue.Add(c, taskqueue.NewPOSTTask("/deliver/"+rname, r.Form), ""); err != nil {
 		log.Errorf(c, "Error queueing task:  %v", err)
 		http.Error(w, "can't queue task", 500)
+		return
+	}
+
+	w.WriteHeader(204)
+}
+
+func reportError(c context.Context, w http.ResponseWriter, err error) {
+	log.Warningf(c, "Error: %v", err)
+	http.Error(w, "Error processing your request", 500)
+}
+
+func hookTodo(c context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := checkAuth(r); err != nil {
+		log.Errorf(c, "%v", err)
+		http.Error(w, "unauthorized", 403)
+		return
+	}
+
+	tasks, err := taskqueue.LeaseByTag(c, 1, "todo", 30, "")
+	if err != nil {
+		reportError(c, w, err)
+		return
+	}
+
+	if len(tasks) != 1 {
+		log.Infof(c, "No tasks found")
+		w.WriteHeader(204)
+		return
+	}
+
+	task := tasks[0]
+
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"tid":  task.Name,
+		"body": string(task.Payload),
+	}); err != nil {
+		reportError(c, w, err)
+		return
+	}
+}
+
+func handleComplete(c context.Context, w http.ResponseWriter, r *http.Request) {
+	if err := checkAuth(r); err != nil {
+		log.Errorf(c, "%v", err)
+		http.Error(w, "unauthorized", 403)
+		return
+	}
+
+	parts := strings.SplitN(r.URL.Path[6:], "/", 2)
+	if len(parts) != 2 {
+		http.Error(w, "you're doing it wrong", 400)
+		return
+	}
+
+	if err := taskqueue.Delete(c, &taskqueue.Task{Name: parts[1]}, "todo"); err != nil {
+		reportError(c, w, err)
 		return
 	}
 

@@ -173,19 +173,14 @@ func loadInterestingRepos(c context.Context) (map[string]int, error) {
 }
 
 func ghaDownload(c context.Context, w http.ResponseWriter, r *http.Request) {
-	repos, err := loadInterestingRepos(c)
-	if err != nil {
-		log.Errorf(c, "Error loading repos: %v", err)
-		http.Error(w, "Error loading repos:  "+err.Error(), 500)
+	if _, err := taskqueue.Add(c, &taskqueue.Task{
+		Method:  "PULL",
+		Payload: []byte(r.FormValue("fn")),
+	}, "todo"); err != nil {
+		reportError(c, w, err)
 		return
 	}
-	err = processFile(c, repos, r.FormValue("fn"))
-	if err != nil {
-		log.Errorf(c, "Error processing file: %v", err)
-		http.Error(w, "Error processing file: "+err.Error(), 503)
-		return
-	}
-	w.WriteHeader(204)
+	w.WriteHeader(201)
 }
 
 func cronDownload(c context.Context, w http.ResponseWriter, r *http.Request) {

@@ -58,6 +58,10 @@ handlers:
   script: _go_app
   login: optional
 
+- url: /q/.*
+  script: _go_app
+  login: optional
+
 - url: .*
   script: _go_app
   login: required
