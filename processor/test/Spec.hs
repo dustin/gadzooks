@@ -61,6 +61,10 @@ typeIsProp et = typeIs et (Repo et undefined undefined)
 typeIsProp2 :: EventType -> Repo -> Bool
 typeIsProp2 et r@(Repo et' _ _) = typeIs et r == (et == et')
 
+roundtripProp :: (Show a, Read a, Eq a) => a -> Bool
+roundtripProp x = (read.show) x == x
+
+
 tests :: [TestTree]
 tests = [
   testProperty "hour stamp enum +- identity" (enumPlusMinusProp :: HourStamp -> Bool),
@@ -68,6 +72,8 @@ tests = [
   testProperty "combined filters short circuits" combineShortCircuitsProp,
   testProperty "typeIs works" typeIsProp,
   testProperty "typeIs works 2" typeIsProp2,
+
+  testProperty "hourstamp round trips" (roundtripProp :: HourStamp -> Bool),
 
   testCase "parse one literal" parseOne,
   testCase "parse small sample" $ parseSample (const True) 10000,

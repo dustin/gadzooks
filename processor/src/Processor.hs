@@ -21,10 +21,13 @@ import Data.Aeson (Object, json, eitherDecode, encode)
 import Data.Aeson.Lens
 import Data.Maybe (maybe, fromMaybe)
 import Data.Semigroup ((<>))
+import Data.String (fromString)
 import Data.Text (Text, unpack)
+import Control.Monad (guard)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
 import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
+import Data.Word (Word8)
 import Network.Wreq (get, getWith, postWith, defaults, header, responseBody, Options, FormParam((:=)))
 import Text.Read (readMaybe)
 import qualified Codec.Compression.GZip as GZip
@@ -40,6 +43,21 @@ data HourStamp = HourStamp Day Int
 
 instance Show HourStamp where
   show (HourStamp d h) = show d <> "-" <> show h
+
+instance Read HourStamp where
+  readsPrec _ x = either error (\a -> [(a,"")]) $ A.parseOnly p (fromString x)
+    where p :: A.Parser HourStamp
+          p = do
+            ymd <- A.take 10 <* "-"
+            hs <- A.many1 digit
+            let h = rc hs
+            guard $ h >= 0 && h <= 23
+            pure $ HourStamp ((rc . B.unpack) ymd) h
+
+              where digit = A.satisfy isDigit
+                    isDigit w = w >= 48 && w <= 57
+                    rc :: Read a => [Word8] -> a
+                    rc = read . map (toEnum . fromEnum)
 
 instance Enum HourStamp where
   fromEnum (HourStamp d h) = h + (fromEnum d * 24)
