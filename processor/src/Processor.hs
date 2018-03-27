@@ -30,7 +30,7 @@ import Data.Text.Lazy.Encoding (decodeUtf8)
 import Data.Time (Day)
 import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
 import Data.Word (Word8)
-import Network.Wreq (get, getWith, postWith, defaults, header, responseBody, Options, FormParam((:=)))
+import Network.Wreq (get, getWith, postWith, deleteWith, defaults, header, responseBody, Options, FormParam((:=)))
 import Text.Read (readMaybe)
 import qualified Codec.Compression.GZip as GZip
 import qualified Data.Attoparsec.ByteString as A
@@ -174,5 +174,5 @@ pollQueue auth = do
 rmQueue :: Text -> Text -> IO ()
 rmQueue auth tid = do
   let url = unpack ("https://coastal-volt-254.appspot.com/q/rm/x/" <> tid)
-  _ <- postWith (authHdr auth) url ["tid" := tid]
+  _ <- deleteWith (authHdr auth) url
   pure ()
