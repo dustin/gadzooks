@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Main where
 
@@ -19,11 +20,13 @@ data Options = Options {
   , optAbsTimeout :: Integer
   }
 
-loginfo :: String -> IO ()
-loginfo = infoM rootLoggerName
+class Stringy a where string :: a -> String
 
-loginfot :: Text -> IO ()
-loginfot = loginfo . unpack
+instance Stringy [Char] where string = id
+instance Stringy Text where string = unpack
+
+loginfo :: Stringy a => a -> IO ()
+loginfo = infoM rootLoggerName . string
 
 options :: Parser Options
 options = Options
@@ -59,7 +62,7 @@ notify o@(Options sec _) =
       let todo = either (fail <*> show) (filter (combineFilters [interestingFilter repos,
                                                                  typeIs PushEvent])) todoE
       loginfo $ "Todo: " <> (show.length) todo
-      mapM_ (\r@(Repo _ nm _) -> loginfot ("Queueing for " <> nm) >> queueHook sec r) todo
+      mapM_ (\r@(Repo _ nm _) -> loginfo ("Queueing for " <> nm) >> queueHook sec r) todo
 
 main :: IO ()
 main = do
