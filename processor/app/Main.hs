@@ -2,9 +2,14 @@
 
 module Main where
 
-import Options.Applicative
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (race)
+import Control.Monad (when, forever)
+import Data.Either (isLeft)
 import Data.Semigroup ((<>))
 import Data.Text (Text, unpack)
+import Options.Applicative
+import System.Exit (die)
 import System.Log.Logger (rootLoggerName, updateGlobalLogger,
                           Priority(INFO), setLevel, infoM)
 
@@ -12,6 +17,7 @@ import Processor
 
 data Options = Options {
   optSecret :: Text
+  , optAbsTimeout :: Integer
   }
 
 loginfo :: String -> IO ()
@@ -23,6 +29,7 @@ loginfot = loginfo . unpack
 options :: Parser Options
 options = Options
   <$> strOption (long "auth" <> help "auth secret")
+  <*> option auto (long "absTimeout" <> showDefault <> value 1800 <> help "absolute timeout")
 
 processQueue :: Text -> (HourStamp -> IO ()) -> IO Bool
 processQueue sec f = do
@@ -36,7 +43,7 @@ processQueue sec f = do
     process (PolledTask ts qid) = f ts >> rmQueue sec qid
 
 notify :: Options -> IO ()
-notify o@(Options sec) =
+notify o@(Options sec _) =
   processQueue sec each >>= again
 
   where
@@ -55,11 +62,17 @@ notify o@(Options sec) =
       loginfo $ "Todo: " <> (show.length) todo
       mapM_ (\r@(Repo _ nm _) -> loginfot ("Queueing for " <> nm) >> queueHook sec r) todo
 
+waitAbsolutely :: Options -> IO ()
+waitAbsolutely (Options _ 0) = forever (threadDelay 10000000)
+waitAbsolutely (Options _ to) = threadDelay (fromIntegral $ 1000000 * to)
+
 main :: IO ()
 main = do
   updateGlobalLogger rootLoggerName (setLevel INFO)
   o <- execParser opts
-  notify o
+
+  r <- race (waitAbsolutely o) (notify o)
+  when (isLeft r) $ die "reached absolute timeout waiting for completion"
 
   where opts = info (options <**> helper)
           ( fullDesc <> progDesc "Backend processing for gadzooks")

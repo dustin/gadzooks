@@ -55,6 +55,7 @@ executables:
     - optparse-applicative
     - text
     - hslogger
+    - async
 
 tests:
   processor-test:
