@@ -181,7 +181,7 @@ func hookTodo(c context.Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := taskqueue.LeaseByTag(c, 1, "todo", 30, "")
+	tasks, err := taskqueue.LeaseByTag(c, 1, "todo", 1800, "")
 	if err != nil {
 		reportError(c, w, err)
 		return
