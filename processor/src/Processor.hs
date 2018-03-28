@@ -4,6 +4,7 @@ module Processor (
   HourStamp(..),
   Repo(..),
   EventType(..),
+  PolledTask(..),
   archiveURL,
   parseEvent,
   currentStamp,

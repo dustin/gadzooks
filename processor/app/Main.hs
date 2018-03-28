@@ -17,21 +17,43 @@ data Options = Options {
 loginfo :: String -> IO ()
 loginfo = infoM rootLoggerName
 
+loginfot :: Text -> IO ()
+loginfot = loginfo . unpack
+
 options :: Parser Options
 options = Options
   <$> strOption (long "auth" <> help "auth secret")
 
+processQueue :: Text -> (HourStamp -> IO ()) -> IO Bool
+processQueue sec f = do
+  q <- pollQueue sec
+  case q of
+    Nothing -> pure False
+    (Just pt) -> process pt >> pure True
+
+  where
+    process :: PolledTask -> IO()
+    process (PolledTask ts qid) = f ts >> rmQueue sec qid
+
 notify :: Options -> IO ()
-notify (Options sec) = do
-  reposE <- loadInteresting sec
-  let repos = either (fail <*> show) id reposE
-  url <- archiveURL . pred <$> currentStamp
-  todoE <- processURL url
-  let todo = either (fail <*> show) (filter (combineFilters [interestingFilter repos, typeIs PushEvent])) todoE
-  loginfo $ "Todo:  " <> (show.length) todo
-  mapM_ (\r@(Repo _ rn _) -> do
-            loginfo $ unpack $ "Notifying " <> rn
-            queueHook sec r) todo
+notify o@(Options sec) =
+  processQueue sec each >>= again
+
+  where
+    again :: Bool -> IO ()
+    again False = pure ()
+    again True = notify o
+
+    each :: HourStamp -> IO ()
+    each ts = do
+      loginfo $ "Processing ts = " <> show ts
+      reposE <- loadInteresting sec
+      let repos = either (fail <*> show) id reposE
+      todoE <- processURL (archiveURL ts)
+      let todo = either (fail <*> show) (filter (combineFilters [interestingFilter repos,
+                                                                 typeIs PushEvent])) todoE
+      loginfo $ "Todo: " <> (show.length) todo
+      mapM_ (\r@(Repo _ nm _) -> loginfot ("Queueing for " <> nm) >> queueHook sec r) todo
 
 main :: IO ()
 main = do
