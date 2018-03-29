@@ -119,9 +119,7 @@ currentStamp = tostamp <$> getCurrentTime
         tosecs = fromIntegral . (`div` 1000000000000) . diffTimeToPicoseconds
 
 processURL :: String -> IO (Either String [Repo])
-processURL u = do
-  r <- get u
-  pure $ processStream (r ^. responseBody)
+processURL u = get u >>= \r -> pure $ processStream (r ^. responseBody)
 
 gzd :: BL.ByteString -> B.ByteString
 gzd = BL.toStrict . GZip.decompress
@@ -156,11 +154,11 @@ loadInteresting auth = do
   pure $ eitherDecode (r ^. responseBody)
 
 queueHook :: Text -> Repo -> IO ()
-queueHook auth (Repo _ r p) = do
+queueHook auth (Repo _ r p) =
   let payload = encode p
-  let url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
-  _ <- postWith (authHdr auth) url ["payload" := (L.toStrict . decodeUtf8) payload]
-  pure ()
+      url = unpack $ "https://coastal-volt-254.appspot.com/queueHook/" <> r
+  in
+    postWith (authHdr auth) url ["payload" := (L.toStrict . decodeUtf8) payload] >> pure ()
 
 data PolledTask = PolledTask HourStamp Text
   deriving (Show)
@@ -173,7 +171,6 @@ pollQueue auth = do
   pure (PolledTask <$> bod <*> tid)
 
 rmQueue :: Text -> Text -> IO ()
-rmQueue auth tid = do
-  let url = unpack ("https://coastal-volt-254.appspot.com/q/rm/x/" <> tid)
-  _ <- deleteWith (authHdr auth) url
-  pure ()
+rmQueue auth tid =
+  let url = unpack ("https://coastal-volt-254.appspot.com/q/rm/x/" <> tid) in
+    deleteWith (authHdr auth) url >> pure ()
