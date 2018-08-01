@@ -10,7 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
+
 	"golang.org/x/sync/errgroup"
 
 	"google.golang.org/appengine/datastore"

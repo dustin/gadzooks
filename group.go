@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/delay"
