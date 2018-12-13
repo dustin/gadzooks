@@ -16,3 +16,5 @@ queue:
 
 - name: todo
   mode: pull
+  retry_parameters:
+    task_retry_limit: 168
