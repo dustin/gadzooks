@@ -25,8 +25,18 @@ instance Arbitrary EventType where
 instance Arbitrary Repo where
   arbitrary = Repo <$> arbitrary <*> (pack <$> arbitrary) <*> pure undefined
 
-enumPlusMinusProp :: (Enum a, Eq a) => a -> Bool
-enumPlusMinusProp e = e == (succ.pred) e && e == (pred.succ) e
+data EnumIDer = PlusMinus | MinusPlus | FromTo | ID deriving (Enum, Bounded, Show)
+
+evalEnumIDer :: Enum a => EnumIDer -> a -> a
+evalEnumIDer PlusMinus = pred.succ
+evalEnumIDer MinusPlus = succ.pred
+evalEnumIDer FromTo = toEnum.fromEnum
+evalEnumIDer ID = id
+
+instance Arbitrary EnumIDer where arbitrary = arbitraryBoundedEnum
+
+enumEvalID :: (Enum a, Eq a) => EnumIDer -> a -> Bool
+enumEvalID f = evalEnumIDer f >>= (==)
 
 parseOne :: Assertion
 parseOne = do
@@ -62,12 +72,12 @@ typeIsProp2 :: EventType -> Repo -> Bool
 typeIsProp2 et r@(Repo et' _ _) = typeIs et r == (et == et')
 
 roundtripProp :: (Show a, Read a, Eq a) => a -> Bool
-roundtripProp x = (read.show) x == x
+roundtripProp = read.show >>= (==)
 
 
 tests :: [TestTree]
 tests = [
-  testProperty "hour stamp enum +- identity" (enumPlusMinusProp :: HourStamp -> Bool),
+  testProperty "hour stamp enum +- identity" (enumEvalID :: EnumIDer -> HourStamp -> Bool),
   testProperty "combine filters is true for all" allTrueIsTrue,
   testProperty "combined filters short circuits" combineShortCircuitsProp,
   testProperty "typeIs works" typeIsProp,
