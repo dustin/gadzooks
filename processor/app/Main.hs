@@ -1,22 +1,22 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main where
 
-import Control.Monad (when)
-import Data.Maybe (isNothing)
-import Data.Semigroup ((<>))
-import Data.Text (Text, unpack)
-import Options.Applicative
-import System.Exit (die)
-import System.Timeout (timeout)
-import System.Log.Logger (rootLoggerName, updateGlobalLogger,
-                          Priority(INFO), setLevel, infoM)
+import           Control.Monad       (when)
+import           Data.Maybe          (isNothing)
+import           Data.Semigroup      ((<>))
+import           Data.Text           (Text, unpack)
+import           Options.Applicative
+import           System.Exit         (die)
+import           System.Log.Logger   (Priority (INFO), infoM, rootLoggerName,
+                                      setLevel, updateGlobalLogger)
+import           System.Timeout      (timeout)
 
-import Processor
+import           Processor
 
 data Options = Options {
-  optSecret :: Text
+  optSecret       :: Text
   , optAbsTimeout :: Integer
   }
 
@@ -37,7 +37,7 @@ processQueue :: Text -> (HourStamp -> IO ()) -> IO Bool
 processQueue sec f = do
   q <- pollQueue sec
   case q of
-    Nothing -> pure False
+    Nothing   -> pure False
     (Just pt) -> process pt >> pure True
 
   where
@@ -51,7 +51,7 @@ notify o@(Options sec _) =
   where
     again :: Bool -> IO ()
     again False = pure ()
-    again True = notify o
+    again True  = notify o
 
     each :: HourStamp -> IO ()
     each ts = do

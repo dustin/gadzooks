@@ -19,27 +19,31 @@ module Processor (
   rmQueue
   ) where
 
-import Control.Lens
-import Data.Aeson (Object, json, eitherDecode, encode)
-import Data.Aeson.Lens
-import Data.Maybe (maybe, fromMaybe)
-import Data.Semigroup ((<>))
-import Data.String (fromString)
-import Data.Text (Text, unpack)
-import Control.Monad (guard)
-import Data.Text.Lazy.Encoding (decodeUtf8)
-import Data.Time (Day)
-import Data.Time.Clock (diffTimeToPicoseconds, getCurrentTime, utctDay, utctDayTime)
-import Data.Word (Word8)
-import Network.Wreq (get, getWith, postWith, deleteWith, defaults, header, responseBody, Options, FormParam((:=)))
-import Text.Read (readMaybe)
-import qualified Codec.Compression.GZip as GZip
+import qualified Codec.Compression.GZip     as GZip
+import           Control.Lens
+import           Control.Monad              (guard)
+import           Data.Aeson                 (Object, eitherDecode, encode, json)
+import           Data.Aeson.Lens
 import qualified Data.Attoparsec.ByteString as A
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy as BL
-import qualified Data.Set as Set
-import qualified Data.Text.Lazy as L
+import qualified Data.ByteString            as B
+import qualified Data.ByteString.Char8      as BC
+import qualified Data.ByteString.Lazy       as BL
+import           Data.Maybe                 (fromMaybe, maybe)
+import           Data.Semigroup             ((<>))
+import qualified Data.Set                   as Set
+import           Data.String                (fromString)
+import           Data.Text                  (Text, unpack)
+import qualified Data.Text.Lazy             as L
+import           Data.Text.Lazy.Encoding    (decodeUtf8)
+import           Data.Time                  (Day)
+import           Data.Time.Clock            (diffTimeToPicoseconds,
+                                             getCurrentTime, utctDay,
+                                             utctDayTime)
+import           Data.Word                  (Word8)
+import           Network.Wreq               (FormParam ((:=)), Options,
+                                             defaults, deleteWith, get, getWith,
+                                             header, postWith, responseBody)
+import           Text.Read                  (readMaybe)
 
 data HourStamp = HourStamp Day Int
   deriving (Eq)
