@@ -79,7 +79,7 @@ processQueue sec f = do
       get >>= \c@Counts{..} -> put c{errors=errors+1}
 
 notify :: Options -> Processor ()
-notify Options{..} = mfix (\p -> bool p () <$> processQueue optSecret each)
+notify Options{..} = mfix (\p -> bool () p <$> processQueue optSecret each)
 
   where
     each :: HourStamp -> Processor ()
