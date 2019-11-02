@@ -1,3 +1,5 @@
-.stack-work/
-processor.cabal
 *~
+.stack-work/
+TAGS
+processor.cabal
+stack.yaml.lock
