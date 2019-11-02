@@ -55,6 +55,11 @@ executables:
     - optparse-applicative
     - text
     - hslogger
+    - net-mqtt
+    - network-uri
+    - transformers
+    - mtl
+    - bytestring
 
 tests:
   processor-test:
