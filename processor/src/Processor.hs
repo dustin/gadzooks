@@ -45,7 +45,7 @@ import           Network.Wreq               (FormParam ((:=)), Options,
                                              header, postWith, responseBody)
 import           Text.Read                  (readMaybe)
 
-data HourStamp = HourStamp Day Int
+data HourStamp = HourStamp !Day !Int
   deriving (Eq)
 
 instance Show HourStamp where
@@ -71,7 +71,7 @@ instance Enum HourStamp where
   toEnum x = let (d, h) = x `divMod` 24 in
                HourStamp (toEnum d) h
 
-data Repo = Repo EventType Text Object
+data Repo = Repo !EventType !Text !Object
   deriving (Show)
 
 data EventType = CommitCommentEvent
@@ -164,7 +164,7 @@ queueHook auth (Repo _ r p) =
   in
     postWith (authHdr auth) url ["payload" := (L.toStrict . decodeUtf8) payload] >> pure ()
 
-data PolledTask = PolledTask HourStamp Text
+data PolledTask = PolledTask !HourStamp !Text
   deriving (Show)
 
 pollQueue :: Text -> IO (Maybe PolledTask)

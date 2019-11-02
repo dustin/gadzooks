@@ -4,10 +4,14 @@
 
 module Main where
 
+import           Control.Exception          (SomeException)
 import           Control.Monad              (when)
-import           Control.Monad.Reader (runReaderT, ReaderT(..))
-import           Control.Monad.State (execStateT, StateT(..), get, put)
-import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Monad.Catch        (catch)
+import           Control.Monad.Fix          (mfix)
+import           Control.Monad.IO.Class     (MonadIO (..))
+import           Control.Monad.Reader       (ReaderT (..), runReaderT)
+import           Control.Monad.State        (StateT (..), execStateT, get, put)
+import           Data.Bool                  (bool)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import           Data.Maybe                 (fromJust, isNothing)
 import           Data.Semigroup             ((<>))
@@ -16,7 +20,7 @@ import           Network.MQTT.Client
 import           Network.URI
 import           Options.Applicative
 import           System.Exit                (die)
-import           System.Log.Logger          (Priority (INFO), infoM,
+import           System.Log.Logger          (Priority (INFO), errorM, infoM,
                                              rootLoggerName, setLevel,
                                              updateGlobalLogger)
 import           System.Timeout             (timeout)
@@ -30,10 +34,11 @@ data Options = Options {
   , optTopic      :: Topic
   }
 
-data Env = Env { mqc :: MQTTClient }
-data Counts = Counts {filesProcessed :: Int,
-                      msgsProcessed :: Int,
-                      msgsSent :: Int}
+newtype Env = Env { mqc :: MQTTClient }
+data Counts = Counts {filesProcessed :: !Int,
+                      msgsProcessed  :: !Int,
+                      msgsSent       :: !Int,
+                      errors         :: !Int} deriving(Show)
 type Processor = ReaderT Env (StateT Counts IO)
 
 class Stringy a where string :: a -> String
@@ -43,6 +48,10 @@ instance Stringy Text where string = unpack
 
 loginfo :: MonadIO m => Stringy a => a -> m ()
 loginfo = liftIO . infoM rootLoggerName . string
+
+logErr :: MonadIO m => Stringy a => a -> m ()
+logErr = liftIO . errorM rootLoggerName . string
+
 
 options :: Parser Options
 options = Options
@@ -58,34 +67,35 @@ processQueue sec f = do
   q <- liftIO $ pollQueue sec
   case q of
     Nothing   -> pure False
-    (Just pt) -> process pt >> pure True
+    (Just pt) -> processE pt >> pure True
 
   where
-    process (PolledTask ts qid) = do
-      f ts >> (liftIO $ rmQueue sec qid)
+    process :: PolledTask -> Processor ()
+    process (PolledTask ts qid) = f ts >> liftIO (rmQueue sec qid)
+
+    processE :: PolledTask -> Processor ()
+    processE pt@(PolledTask ts _) = catch (process pt) $ \e -> do
+      logErr $ mconcat ["error processing ", show ts, ": ", show (e :: SomeException)]
+      get >>= \c@Counts{..} -> put c{errors=errors+1}
 
 notify :: Options -> Processor ()
-notify o@Options{..} = do
-  processQueue optSecret each >>= again
+notify Options{..} = mfix (\p -> bool p () <$> processQueue optSecret each)
 
   where
-    again False = pure ()
-    again True  = notify o
-
     each :: HourStamp -> Processor ()
     each ts = do
       loginfo $ "Processing ts = " <> show ts
       reposE <- liftIO $ loadInteresting optSecret
       let repos = either (fail <*> show) id reposE
-      todoE <- liftIO $ processURL (archiveURL ts)
-      let todo = either (fail <*> show) (filter (combineFilters [interestingFilter repos,
-                                                                 typeIs PushEvent])) todoE
-      loginfo $ "Todo: " <> (show.length) todo
-      liftIO $ mapM_ (\r@(Repo _ nm _) -> loginfo ("Queueing for " <> nm) >> queueHook optSecret r) todo
-      Counts{..} <- get
-      put Counts{filesProcessed=filesProcessed + 1,
-                 msgsProcessed=msgsProcessed + length todoE,
-                 msgsSent=msgsSent + length todo
+      allEventsE <- liftIO $ processURL (archiveURL ts)
+      let allEvents = either (fail <*> show) id allEventsE
+          toSend = filter (combineFilters [interestingFilter repos, typeIs PushEvent]) allEvents
+      loginfo $ "To send: " <> (show.length) toSend
+      liftIO $ mapM_ (\r@(Repo _ nm _) -> loginfo ("Queueing for " <> nm) >> queueHook optSecret r) toSend
+      c@Counts{..} <- get
+      put c{filesProcessed=filesProcessed + 1,
+                 msgsProcessed=msgsProcessed + length allEvents,
+                 msgsSent=msgsSent + length toSend
                  }
 
 runTrans :: Options -> Env -> Counts -> IO Counts
@@ -100,7 +110,7 @@ main = do
 
   let to = fromIntegral $ 1000000 * optAbsTimeout
 
-  r <- timeout to (runTrans o (Env mc) (Counts 0 0 0))
+  r <- timeout to (runTrans o (Env mc) (Counts 0 0 0 0))
   when (isNothing r) $ die "timed out processing"
   let (Just Counts{..}) = r
 
@@ -109,6 +119,8 @@ main = do
   publishq mc (optTopic <> "msgs") (BC.pack $ show msgsProcessed) True QoS2 [
     PropMessageExpiryInterval 7200]
   publishq mc (optTopic <> "sent") (BC.pack $ show msgsSent) True QoS2 [
+    PropMessageExpiryInterval 7200]
+  publishq mc (optTopic <> "errors") (BC.pack $ show errors) True QoS2 [
     PropMessageExpiryInterval 7200]
 
   where opts = info (options <**> helper)

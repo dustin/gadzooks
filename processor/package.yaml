@@ -60,6 +60,7 @@ executables:
     - transformers
     - mtl
     - bytestring
+    - exceptions
 
 tests:
   processor-test:
