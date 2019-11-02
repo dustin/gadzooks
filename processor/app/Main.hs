@@ -31,7 +31,9 @@ data Options = Options {
   }
 
 data Env = Env { mqc :: MQTTClient }
-data Counts = Counts {filesProcessed :: Int, msgsProcessed :: Int}
+data Counts = Counts {filesProcessed :: Int,
+                      msgsProcessed :: Int,
+                      msgsSent :: Int}
 type Processor = ReaderT Env (StateT Counts IO)
 
 class Stringy a where string :: a -> String
@@ -81,7 +83,10 @@ notify o@Options{..} = do
       loginfo $ "Todo: " <> (show.length) todo
       liftIO $ mapM_ (\r@(Repo _ nm _) -> loginfo ("Queueing for " <> nm) >> queueHook optSecret r) todo
       Counts{..} <- get
-      put Counts{filesProcessed=filesProcessed + 1, msgsProcessed=msgsProcessed + length todo}
+      put Counts{filesProcessed=filesProcessed + 1,
+                 msgsProcessed=msgsProcessed + length todoE,
+                 msgsSent=msgsSent + length todo
+                 }
 
 runTrans :: Options -> Env -> Counts -> IO Counts
 runTrans opts = execStateT . runReaderT (notify opts)
@@ -95,13 +100,15 @@ main = do
 
   let to = fromIntegral $ 1000000 * optAbsTimeout
 
-  r <- timeout to (runTrans o (Env mc) (Counts 0 0))
+  r <- timeout to (runTrans o (Env mc) (Counts 0 0 0))
   when (isNothing r) $ die "timed out processing"
   let (Just Counts{..}) = r
 
   publishq mc (optTopic <> "files") (BC.pack $ show filesProcessed) True QoS2 [
     PropMessageExpiryInterval 7200]
   publishq mc (optTopic <> "msgs") (BC.pack $ show msgsProcessed) True QoS2 [
+    PropMessageExpiryInterval 7200]
+  publishq mc (optTopic <> "sent") (BC.pack $ show msgsSent) True QoS2 [
     PropMessageExpiryInterval 7200]
 
   where opts = info (options <**> helper)
