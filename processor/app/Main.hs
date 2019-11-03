@@ -7,11 +7,9 @@ module Main where
 import           Control.Exception          (SomeException)
 import           Control.Monad              (when)
 import           Control.Monad.Catch        (catch)
-import           Control.Monad.Fix          (mfix)
 import           Control.Monad.IO.Class     (MonadIO (..))
 import           Control.Monad.Reader       (ReaderT (..), runReaderT)
 import           Control.Monad.State        (StateT (..), execStateT, get, put)
-import           Data.Bool                  (bool)
 import qualified Data.ByteString.Lazy.Char8 as BC
 import           Data.Maybe                 (fromJust, isNothing)
 import           Data.Semigroup             ((<>))
@@ -78,8 +76,13 @@ processQueue sec f = do
       logErr $ mconcat ["error processing ", show ts, ": ", show (e :: SomeException)]
       get >>= \c@Counts{..} -> put c{errors=errors+1}
 
+while :: Monad m => m Bool -> m ()
+while a = do
+  b <- a
+  if b then while a else pure ()
+
 notify :: Options -> Processor ()
-notify Options{..} = mfix (\p -> bool () p <$> processQueue optSecret each)
+notify Options{..} = while (processQueue optSecret each)
 
   where
     each :: HourStamp -> Processor ()
